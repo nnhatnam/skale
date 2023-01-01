@@ -1,0 +1,2 @@
+# skale
+Go data structures
