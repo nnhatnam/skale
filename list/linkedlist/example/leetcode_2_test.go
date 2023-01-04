@@ -2,18 +2,18 @@ package example
 
 import (
 	"fmt"
-	"github.com/nnhatnam/skale/list"
+	"github.com/nnhatnam/skale/list/linkedlist"
 	"testing"
 )
 
 // https://leetcode.com/problems/add-two-numbers/
-// You are given two non-empty linked lists representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit. Add the two numbers and return the sum as a linked list.
+// You are given two non-empty linked lists representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit. Add the two numbers and return the sum as a linked linkedlist.
 // You may assume the two numbers do not contain any leading zero, except the number 0 itself.
 func TestAddTwoNumbers(t *testing.T) {
 
 	//Example 1:
-	l1 := list.From(2, 4, 3)
-	l2 := list.From(5, 6, 4)
+	l1 := linkedlist.From(2, 4, 3)
+	l2 := linkedlist.From(5, 6, 4)
 
 	//Output: 7 -> 0 -> 8 -> nil (342 + 465 = 807)
 	l3 := addTwoNumbers(l1, l2)
@@ -28,10 +28,10 @@ func TestAddTwoNumbers(t *testing.T) {
 
 }
 
-// addTwoNumbers adds two numbers represented by linked list. l1 and l2 are linked list representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit. Add the two numbers and return the sum as a linked list.
+// addTwoNumbers adds two numbers represented by linked linkedlist. l1 and l2 are linked linkedlist representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit. Add the two numbers and return the sum as a linked linkedlist.
 // l1 and l2 must not be nil.
-func addTwoNumbers(l1 *list.List, l2 *list.List) *list.List {
-	l3 := list.New()
+func addTwoNumbers(l1 *linkedlist.List, l2 *linkedlist.List) *linkedlist.List {
+	l3 := linkedlist.New()
 	if l1.Len() == 0 && l2.Len() == 0 {
 		return l3
 	} else if l1.Len() == 0 {

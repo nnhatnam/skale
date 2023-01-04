@@ -1,4 +1,4 @@
-package list
+package linkedlist
 
 type Cursor struct {
 	list    *List
@@ -31,7 +31,7 @@ func (i *Cursor) HasNext() bool {
 }
 
 func (i *Cursor) Next() any {
-	//if current is root (in case of empty list), return false
+	//if current is root (in case of empty linkedlist), return false
 	//if current is the last node, return false
 	if i.current == &i.list.root || i.current.next == &i.list.root {
 		return nil
@@ -45,7 +45,7 @@ func (i *Cursor) HasPrev() bool {
 }
 
 func (i *Cursor) Prev() any {
-	//if current is root (in case of empty list), return false
+	//if current is root (in case of empty linkedlist), return false
 	//if current is the first node, return false
 	if i.current == &i.list.root || i.current.prev == &i.list.root {
 		return nil
@@ -54,17 +54,17 @@ func (i *Cursor) Prev() any {
 	return i.current
 }
 
-// First moves the Cursor to the first node in the list
+// First moves the Cursor to the first node in the linkedlist
 func (i *Cursor) First() {
 	i.current = i.list.root.next
 }
 
-// Last moves the Cursor to the last node in the list
+// Last moves the Cursor to the last node in the linkedlist
 func (i *Cursor) Last() {
 	i.current = i.list.root.prev
 }
 
-// IsLast check if the current node is the last node in the list
+// IsLast check if the current node is the last node in the linkedlist
 func (i *Cursor) IsLast() bool {
 	return i.current.next == &i.list.root
 }

@@ -1,6 +1,6 @@
-package list
+package linkedlist
 
-// Node is a node in a double linked list
+// Node is a node in a double linked linkedlist
 type Node struct {
 	next, prev *Node
 
@@ -43,12 +43,12 @@ func (l *List) decrement() {
 	l.length--
 }
 
-// Len returns the length of the list
+// Len returns the length of the linkedlist
 func (l *List) Len() int {
 	return l.length
 }
 
-// first returns the first node in the list
+// first returns the first node in the linkedlist
 func (l *List) first() *Node {
 	if l.length == 0 {
 		return nil
@@ -56,7 +56,7 @@ func (l *List) first() *Node {
 	return l.root.next
 }
 
-// last returns the last node in the list
+// last returns the last node in the linkedlist
 func (l *List) last() *Node {
 	if l.length == 0 {
 		return nil
@@ -64,12 +64,12 @@ func (l *List) last() *Node {
 	return l.root.prev
 }
 
-// First returns the first value in the list
+// First returns the first value in the linkedlist
 func (l *List) First() any {
 	return l.first().Value
 }
 
-// Last returns the last value in the list
+// Last returns the last value in the linkedlist
 func (l *List) Last() any {
 
 	return l.last().Value

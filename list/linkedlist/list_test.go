@@ -1,4 +1,4 @@
-package list
+package linkedlist
 
 import "testing"
 
@@ -62,7 +62,7 @@ func checkListLen(t *testing.T, l *List, len int) bool {
 //	l := New()
 //	checkListPointers(t, l, []*Node{})
 //
-//	// Single Node list
+//	// Single Node linkedlist
 //	e := l.PushFront("a")
 //	checkListPointers(t, l, []*Node{e})
 //	l.MoveToFront(e)
@@ -72,7 +72,7 @@ func checkListLen(t *testing.T, l *List, len int) bool {
 //	l.Remove(e)
 //	checkListPointers(t, l, []*Node{})
 //
-//	// Bigger list
+//	// Bigger linkedlist
 //	e2 := l.PushFront(2)
 //	e1 := l.PushFront(1)
 //	e3 := l.PushBack(3)
@@ -302,7 +302,7 @@ func checkListLen(t *testing.T, l *List, len int) bool {
 //	checkList(t, l4, []any{1})
 //}
 //
-//// Test that a list l is not modified when calling InsertBefore with a mark that is not an Node of l.
+//// Test that a linkedlist l is not modified when calling InsertBefore with a mark that is not an Node of l.
 //func TestInsertBeforeUnknownMark(t *testing.T) {
 //	var l List
 //	l.PushBack(1)
@@ -312,7 +312,7 @@ func checkListLen(t *testing.T, l *List, len int) bool {
 //	checkList(t, &l, []any{1, 2, 3})
 //}
 //
-//// Test that a list l is not modified when calling InsertAfter with a mark that is not an Node of l.
+//// Test that a linkedlist l is not modified when calling InsertAfter with a mark that is not an Node of l.
 //func TestInsertAfterUnknownMark(t *testing.T) {
 //	var l List
 //	l.PushBack(1)
@@ -322,7 +322,7 @@ func checkListLen(t *testing.T, l *List, len int) bool {
 //	checkList(t, &l, []any{1, 2, 3})
 //}
 //
-//// Test that a list l is not modified when calling MoveAfter or MoveBefore with a mark that is not an Node of l.
+//// Test that a linkedlist l is not modified when calling MoveAfter or MoveBefore with a mark that is not an Node of l.
 //func TestMoveUnknownMark(t *testing.T) {
 //	var l1 List
 //	e1 := l1.PushBack(1)
