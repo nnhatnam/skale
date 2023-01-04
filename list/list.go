@@ -2,7 +2,7 @@ package list
 
 // Node is a node in a double linked list
 type Node struct {
-	Next, Prev *Node
+	next, prev *Node
 
 	Value any
 }
@@ -21,16 +21,16 @@ type IterFuncWithIndex func(i int, v any)
 
 func New() *List {
 	l := new(List)
-	l.root.Next = &l.root
-	l.root.Prev = &l.root
+	l.root.next = &l.root
+	l.root.prev = &l.root
 	l.length = 0
 	return l
 }
 
-func NewWithValues(values ...any) *List {
+func From(values ...any) *List {
 	l := New()
 	for _, v := range values {
-		l.insertValue(v, l.root.Prev)
+		l.insertValue(v, l.root.prev)
 	}
 	return l
 }
@@ -53,7 +53,7 @@ func (l *List) first() *Node {
 	if l.length == 0 {
 		return nil
 	}
-	return l.root.Next
+	return l.root.next
 }
 
 // last returns the last node in the list
@@ -61,7 +61,7 @@ func (l *List) last() *Node {
 	if l.length == 0 {
 		return nil
 	}
-	return l.root.Prev
+	return l.root.prev
 }
 
 // First returns the first value in the list
@@ -78,15 +78,15 @@ func (l *List) Last() any {
 // insert inserts a node after mark. The mask must not be nil.
 func (l *List) insert(n, at *Node) *Node {
 
-	//n after at, n before at.Next
-	n.Prev = at
-	n.Next = at.Next
+	//n after at, n before at.next
+	n.prev = at
+	n.next = at.next
 
 	//at before n
-	at.Next = n
+	at.next = n
 
-	//n before at.Next
-	n.Next.Prev = n
+	//n before at.next
+	n.next.prev = n
 	l.increment()
 	return n
 }
@@ -98,17 +98,17 @@ func (l *List) insertValue(v any, mark *Node) *Node {
 
 func (l *List) remove(n *Node) *Node {
 
-	//node before n is now before n.Next
-	n.Prev.Next = n.Next
+	//node before n is now before n.next
+	n.prev.next = n.next
 
-	//node after n is now after n.Prev
-	n.Next.Prev = n.Prev
+	//node after n is now after n.prev
+	n.next.prev = n.prev
 	l.decrement()
 	return n
 }
 
 func (l *List) PushBack(v any) {
-	l.insertValue(v, l.root.Prev)
+	l.insertValue(v, l.root.prev)
 }
 
 func (l *List) PushFront(v any) {
@@ -133,36 +133,36 @@ func (l *List) PopBack() any {
 	return n.Value
 }
 
-func (l *List) Begin() *Iterator {
-	return &Iterator{list: l, current: l.root.Next}
+func (l *List) Begin() *Cursor {
+	return &Cursor{list: l, current: l.root.next}
 }
 
-func (l *List) End() *Iterator {
-	return &Iterator{list: l, current: l.root.Prev}
+func (l *List) End() *Cursor {
+	return &Cursor{list: l, current: l.root.prev}
 }
 
 func (l *List) Traverse(f IterFunc) {
-	for n := l.first(); n != l.last(); n = n.Next {
+	for n := l.first(); n != l.last(); n = n.next {
 		f(n.Value)
 	}
 }
 
 func (l *List) RTraverse(f IterFunc) {
-	for n := l.last(); n != l.first(); n = n.Prev {
+	for n := l.last(); n != l.first(); n = n.prev {
 		f(n.Value)
 	}
 }
 
 func (l *List) TraverseWithIndex(f IterFuncWithIndex) {
 	i := 0
-	for n := l.first(); n != l.last(); n, i = n.Next, i+1 {
+	for n := l.first(); n != l.last(); n, i = n.next, i+1 {
 		f(i, n.Value)
 	}
 }
 
 func (l *List) RTraverseWithIndex(f IterFuncWithIndex) {
 	i := l.length - 1
-	for n := l.first(); n != l.last(); n, i = n.Next, i-1 {
+	for n := l.first(); n != l.last(); n, i = n.next, i-1 {
 		f(i, n.Value)
 	}
 }

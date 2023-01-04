@@ -1,6 +1,7 @@
 package example
 
 import (
+	"fmt"
 	"github.com/nnhatnam/skale/list"
 	"testing"
 )
@@ -11,8 +12,8 @@ import (
 func TestAddTwoNumbers(t *testing.T) {
 
 	//Example 1:
-	l1 := list.NewWithValues(2, 4, 3)
-	l2 := list.NewWithValues(5, 6, 4)
+	l1 := list.From(2, 4, 3)
+	l2 := list.From(5, 6, 4)
 
 	//Output: 7 -> 0 -> 8 -> nil (342 + 465 = 807)
 	l3 := addTwoNumbers(l1, l2)
@@ -20,7 +21,7 @@ func TestAddTwoNumbers(t *testing.T) {
 	l3.RTraverse(func(v any) {
 		sum = sum*10 + v.(int)
 	})
-
+	fmt.Println("aa")
 	if sum != 807 {
 		t.Errorf("Example 1, expected %d, got %d", sum, 807)
 	}

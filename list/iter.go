@@ -1,71 +1,70 @@
 package list
 
-type Iterator struct {
+type Cursor struct {
 	list    *List
 	current *Node
 }
 
-func NewIterator(l *List) *Iterator {
-	return &Iterator{list: l, current: l.root.Next}
+type MulFunc func(n *Node)
+
+func NewCursor(l *List) *Cursor {
+	return &Cursor{list: l, current: l.root.next}
 }
 
-// Node gives access to the current node. Be careful not to modify the node
-// In skale, Node.Next and Node.Prev are public, so you're allowed to modify it but be aware that it may break the underline list
-// Also, skale implements using a sentinel node, so if you extract the tail node, Node.Next will be the sentinel node
-// If you extract the head node, Node.Prev will be the sentinel node
-func (i *Iterator) Node() *Node {
+// Node gives access to the current node.
+func (i *Cursor) Node() *Node {
 	if i.list != nil && i.current != &i.list.root {
 		return i.current
 	}
 	return nil
 }
 
-func (i *Iterator) Value() any {
+func (i *Cursor) Value() any {
 	if i.current == &i.list.root {
 		return nil
 	}
 	return i.current.Value
 }
 
-func (i *Iterator) HasNext() bool {
-	return i.current.Next != &i.list.root
+func (i *Cursor) HasNext() bool {
+	return i.current.next != &i.list.root
 }
 
-func (i *Iterator) Next() any {
+func (i *Cursor) Next() any {
 	//if current is root (in case of empty list), return false
 	//if current is the last node, return false
-	if i.current == &i.list.root || i.current.Next == &i.list.root {
+	if i.current == &i.list.root || i.current.next == &i.list.root {
 		return nil
 	}
-	i.current = i.current.Next
+	i.current = i.current.next
 	return i.current.Value
 }
 
-func (i *Iterator) HasPrev() bool {
-	return i.current.Prev != &i.list.root
+func (i *Cursor) HasPrev() bool {
+	return i.current.prev != &i.list.root
 }
 
-func (i *Iterator) Prev() any {
+func (i *Cursor) Prev() any {
 	//if current is root (in case of empty list), return false
 	//if current is the first node, return false
-	if i.current == &i.list.root || i.current.Prev == &i.list.root {
+	if i.current == &i.list.root || i.current.prev == &i.list.root {
 		return nil
 	}
-	i.current = i.current.Prev
+	i.current = i.current.prev
 	return i.current
 }
 
-// First moves the iterator to the first node in the list
-func (i *Iterator) First() {
-	i.current = i.list.root.Next
+// First moves the Cursor to the first node in the list
+func (i *Cursor) First() {
+	i.current = i.list.root.next
 }
 
-// Last moves the iterator to the last node in the list
-func (i *Iterator) Last() {
-	i.current = i.list.root.Prev
+// Last moves the Cursor to the last node in the list
+func (i *Cursor) Last() {
+	i.current = i.list.root.prev
 }
 
 // IsLast check if the current node is the last node in the list
-func (i *Iterator) IsLast() bool {
-	return i.current.Next == &i.list.root
+func (i *Cursor) IsLast() bool {
+	return i.current.next == &i.list.root
 }
