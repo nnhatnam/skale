@@ -1,8 +1,11 @@
 package list
 
-type LinearList[L any] interface {
+type LinearList[V any] interface {
 	Len() int
-	PushBack(value L)
-	Front() L
-	Back() L
+	PushBack(value V)
+	PushFront(value V)
+	PopBack() V
+	PopFront() V
+	Front() V
+	Back() V
 }

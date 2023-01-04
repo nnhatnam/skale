@@ -24,10 +24,18 @@ func (s *Stack[V]) Len() int {
 	return s.Len()
 }
 
-func (s *Stack[V]) Push(value V) {
+func (s *Stack[V]) PushBack(value V) {
 	s.elements.PushBack(value)
 }
 
-func (s *Stack[V]) Pop() V {
-	return s.Pop()
+func (s *Stack[V]) PopBack() V {
+	return s.elements.PopBack()
+}
+
+func (s *Stack[V]) Front() V {
+	return s.elements.Front()
+}
+
+func (s *Stack[V]) Back() V {
+	return s.elements.Back()
 }
