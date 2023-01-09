@@ -5,516 +5,330 @@ import (
 	"github.com/nnhatnam/skale"
 )
 
-type Node[K, V any] struct {
-	Key         K           // The key of the node
-	Value       V           // The value of the node
-	Parent      *Node[K, V] // The parent of the node
-	Left, Right *Node[K, V] // The left and right children of the node
+type direction uint8
 
-	bFactor int // balance factor
+var (
+	LEFT  direction = 0
+	RIGHT direction = 1
+)
+
+// the idea is we can create a Node with anytype, but the node maynot be a tree node if we can't compare it with other nodes
+type Node[V any] struct {
+	Value  V        // The value of the node
+	Parent *Node[V] // The parent of the node
+	//Left, Right *Node[V]    // The left and right children of the node
+	Child [2]*Node[V] // The left and right children of the node
+
+	bFactor int8 // balance factor
 }
 
-func newNode[K, V any](key K, value V) *Node[K, V] {
-	return &Node[K, V]{Key: key, Value: value}
+func (v Node[V]) String() string {
+	return fmt.Sprintf("%v (%v)", v.Value, v.bFactor)
 }
 
-// NewNode creates a new node with the given key and value
-func NewNode[K, V any](key K, value V) *Node[K, V] {
-	return newNode(key, value)
+func NewNode[V any](value V) *Node[V] {
+	return &Node[V]{Value: value}
 }
 
-type Tree[K, V any] struct {
-	root *Node[K, V]       // The root of the tree
-	less skale.LessFunc[K] // The less function
+type Tree[V any] struct {
+	root *Node[V]          // The root of the tree
+	less skale.LessFunc[V] // The less function
 	size int
 }
 
-func newTree[K, V any](less skale.LessFunc[K]) *Tree[K, V] {
-	return &Tree[K, V]{less: less}
+func New[V any](less skale.LessFunc[V]) *Tree[V] {
+	return &Tree[V]{less: less}
 }
 
-func New[K, V any](less skale.LessFunc[K]) *Tree[K, V] {
-	return newTree[K, V](less)
-}
-
-func NewOrdered[K, V skale.Ordered]() *Tree[K, V] {
-	return newTree[K, V](skale.Less[K]())
+func NewOrdered[V skale.Ordered]() *Tree[V] {
+	return New(skale.Less[V]())
 }
 
 // -----------------------------------------internal methods-----------------------------------------
 
+func rotate[V any](node *Node[V], dir direction) *Node[V] {
+	//dir = 0: left, dir = 1: right
+
+	//Example: dir = 0, which is left rotation
+	y := node.Child[1-dir] // y := node.Right
+	t := y.Child[dir]      // t := y.Left
+
+	//perform rotation
+	y.Child[dir] = node   // y.Left = node
+	node.Child[1-dir] = t // node.Right = t
+
+	if t != nil {
+		t.Parent = node // t.Parent = node
+	}
+
+	y.Parent = node.Parent // y.Parent = node.Parent
+
+	node.Parent = y // node.Parent = y
+	str := "AVLTree\n"
+	output[V](node, "", true, &str)
+	//fmt.Println("node:", str)
+
+	return y
+
+}
+
 // rotateLeft performs a left rotation on the given node
-func (t *Tree[K, V]) rotateLeft(node *Node[K, V]) {
-	right := node.Right
-	node.Right = right.Left
-	if right.Left != nil {
-		right.Left.Parent = node
-	}
-	right.Parent = node.Parent
-	if node.Parent == nil {
-		t.root = right
-	} else if node == node.Parent.Left {
-		node.Parent.Left = right
-	} else {
-		node.Parent.Right = right
-	}
-	right.Left = node
-	node.Parent = right
+func (t *Tree[V]) rotateLeft(node *Node[V]) *Node[V] {
+	return rotate(node, LEFT)
+}
+
+func (t *Tree[V]) rotateRightLeft(node *Node[V]) *Node[V] {
+	node.Child[RIGHT] = t.rotateRight(node.Child[RIGHT])
+	return t.rotateLeft(node)
 }
 
 // rotateRight performs a right rotation on the given node
-func (t *Tree[K, V]) rotateRight(node *Node[K, V]) {
-	left := node.Left
-	node.Left = left.Right
-	if left.Right != nil {
-		left.Right.Parent = node
+func (t *Tree[V]) rotateRight(node *Node[V]) *Node[V] {
+
+	return rotate(node, RIGHT)
+
+}
+
+func (t *Tree[V]) rotateLeftRight(node *Node[V]) *Node[V] {
+	node.Child[LEFT] = t.rotateLeft(node.Child[LEFT])
+	return t.rotateRight(node)
+}
+
+// insert insert val into a tree t
+// 1. Find the spot
+// 2. Insert the node
+// 3. Balance the tree
+func (t *Tree[V]) insert(node *Node[V], val V) (*Node[V], bool) {
+
+	// 0 : false, 1: true
+	var isRotated bool
+	if node == nil {
+		return NewNode(val), isRotated
 	}
-	left.Parent = node.Parent
-	if node.Parent == nil {
-		t.root = left
-	} else if node == node.Parent.Right {
-		node.Parent.Right = left
+
+	if t.less(val, node.Value) {
+
+		node.Child[LEFT], isRotated = t.insert(node.Child[LEFT], val)
+		node.Child[LEFT].Parent = node
+
+		// if the child left is rotated, then we don't need to rotate the parent. BFactor is already updated
+		if !isRotated {
+			node.bFactor++
+		}
+
 	} else {
-		node.Parent.Left = left
-	}
-	left.Right = node
-	node.Parent = left
-}
 
-// rebalance performs a rebalance on the given node
-func (t *Tree[K, V]) rebalance(node *Node[K, V]) {
-	for node != nil {
-		if node.bFactor == -2 {
-			if node.Left.bFactor == 1 {
-				t.rotateLeft(node.Left)
-			}
-			t.rotateRight(node)
-		} else if node.bFactor == 2 {
-			if node.Right.bFactor == -1 {
-				t.rotateRight(node.Right)
-			}
-			t.rotateLeft(node)
-		}
-		if node.bFactor == 0 {
-			break
-		}
-		node = node.Parent
-	}
-}
+		node.Child[RIGHT], isRotated = t.insert(node.Child[RIGHT], val)
+		node.Child[RIGHT].Parent = node
 
-// insert inserts the given node into the tree
-func (t *Tree[K, V]) insert(node *Node[K, V]) {
-	if t.root == nil {
-		t.root = node
-		t.size++
-		return
+		// if the child right is rotated, then we don't need to rotate the parent. BFactor is already updated
+		if !isRotated {
+			node.bFactor--
+		}
+
 	}
-	var parent *Node[K, V]
-	current := t.root
-	for current != nil {
-		parent = current
-		if t.less(node.Key, current.Key) {
-			current = current.Left
+
+	t.output()
+
+	//bFactor = 0 => balance
+	//bFactor = 1 => left heavy
+	//bFactor = -1 => right heavy
+
+	if node.bFactor > 1 {
+		if node.Child[LEFT].bFactor > 0 {
+			//left left case
+			node.bFactor = 0
+			node = t.rotateRight(node)
+			node.bFactor = 0
 		} else {
-			current = current.Right
+			//left right case
+			node.bFactor = 0
+			node.Child[LEFT].bFactor = 0
+			node = t.rotateLeftRight(node)
 		}
+		return node, true
+	} else if node.bFactor < -1 {
+		if node.Child[RIGHT].bFactor < 0 {
+			//right right case
+			node.bFactor = 0
+			node = t.rotateLeft(node)
+			t.output()
+			node.bFactor = 0
+		} else {
+			//right left case
+			node.bFactor = 0
+			node.Child[RIGHT].bFactor = 0
+			node = t.rotateRightLeft(node)
+
+		}
+		return node, true
 	}
-	if t.less(node.Key, parent.Key) {
-		parent.Left = node
+
+	return node, false
+
+}
+
+// successor returns the successor of the node
+func (t *Tree[V]) successor(node *Node[V]) *Node[V] {
+	if node == nil {
+		return nil
+	}
+
+	node = node.Child[RIGHT]
+	for node.Child[LEFT] != nil {
+		node = node.Child[LEFT]
+	}
+
+	return node
+}
+
+// predecessor returns the predecessor of the node
+func (t *Tree[V]) predecessor(node *Node[V]) *Node[V] {
+	if node == nil {
+		return nil
+	}
+
+	node = node.Child[LEFT]
+	for node.Child[RIGHT] != nil {
+		node = node.Child[RIGHT]
+	}
+
+	return node
+}
+
+// delete delete val from a tree t
+func (t *Tree[V]) delete(node *Node[V], val V) (*Node[V], bool) {
+
+	isRotated := false
+	if node == nil {
+		return node, isRotated
+	}
+
+	if t.less(val, node.Value) {
+		node.Child[LEFT], isRotated = t.delete(node.Child[LEFT], val)
+		if !isRotated {
+
+		}
+
+	} else if t.less(node.Value, val) {
+		node.Child[RIGHT], isRotated = t.delete(node.Child[RIGHT], val)
+		if !isRotated {
+			node.bFactor++
+		}
 	} else {
-		parent.Right = node
+
+		//the node has no child
+		if node.Child[LEFT] == nil && node.Child[RIGHT] == nil {
+			node = nil
+		} else if node.Child[RIGHT] == nil {
+			//the node has only left child
+			node = node.Child[LEFT]
+			node.Parent = nil
+		} else if node.Child[LEFT] == nil {
+			//the node has only right child
+			node = node.Child[RIGHT]
+			node.Parent = nil
+		} else {
+			//the node has both left and right child
+			//find the successor
+			successor := t.successor(node)
+			node.Value = successor.Value
+			node.Child[RIGHT], _ = t.delete(node.Child[RIGHT].Parent, successor.Value)
+
+		}
+
 	}
-	node.Parent = parent
+
+	//if the node has only one child, then the node is the successor
+	if node == nil {
+		return node, false
+	}
+
+	//update the bFactor
+	if node.bFactor > 1 {
+		if node.Child[LEFT].bFactor == 0 {
+			//R0 case
+			node.bFactor = 1
+			node = t.rotateRight(node)
+			node.bFactor = -1
+		} else if node.Child[LEFT].bFactor == 1 {
+			//R1 case
+			node.bFactor = 0
+			node = t.rotateRight(node)
+			node.bFactor = 0
+		} else if node.Child[LEFT].bFactor == -1 {
+			//R-1 case
+			node.bFactor = 0
+			node.Child[LEFT].bFactor = 0
+			node = t.rotateLeftRight(node)
+		}
+		return node, true
+	} else if node.bFactor < -1 {
+		if node.Child[RIGHT].bFactor == 0 {
+			//L0 case
+			node.bFactor = -1
+			node = t.rotateLeft(node)
+			node.bFactor = 1
+		} else if node.Child[RIGHT].bFactor == -1 {
+			//L-1 case
+			node.bFactor = 0
+			node = t.rotateLeft(node)
+			node.bFactor = 0
+		} else if node.Child[RIGHT].bFactor == 1 {
+			//L1 case
+			node.bFactor = 0
+			node.Child[RIGHT].bFactor = 0
+			node = t.rotateRightLeft(node)
+		}
+		return node, true
+	}
+
+	return node, false
+
+}
+
+func (t *Tree[V]) insertFromRoot(val V) {
 	t.size++
+	t.root, _ = t.insert(t.root, val)
 }
 
-// delete deletes the given node from the tree
-func (t *Tree[K, V]) delete(node *Node[K, V]) {
-	var child *Node[K, V]
-	if node.Left == nil || node.Right == nil {
-		if node.Parent == nil {
-			t.root = nil
-			return
-		}
-		child = node
-	} else {
-		child = node.Right
-		for child.Left != nil {
-			child = child.Left
-		}
-		node.Key = child.Key
-		node.Value = child.Value
-	}
-	var parent *Node[K, V]
-	if child.Left != nil {
-		parent = child.Left
-	} else {
-		parent = child.Right
-	}
+func (t *Tree[V]) output() {
+	str := "AVLTree\n"
+	output[V](t.root, "", true, &str)
 
-	if parent != nil {
-		parent.Parent = child.Parent
-	}
-
-	if child.Parent == nil {
-		t.root = parent
-	} else {
-		if child == child.Parent.Left {
-			child.Parent.Left = parent
-		} else {
-			child.Parent.Right = parent
-		}
-	}
-
-	if child.bFactor == 0 {
-		for parent != nil {
-			if parent.Left == child {
-				parent.bFactor++
-			} else {
-				parent.bFactor--
-			}
-			if parent.bFactor == 1 || parent.bFactor == -1 {
-				break
-			}
-			if parent.bFactor == 2 || parent.bFactor == -2 {
-				t.rebalance(parent)
-			}
-			child = parent
-			parent = parent.Parent
-		}
-	}
-	t.size--
-}
-
-func (t *Tree[K, V]) search(key K) *Node[K, V] {
-	current := t.root
-	for current != nil {
-		if t.less(key, current.Key) {
-			current = current.Left
-		} else if t.less(current.Key, key) {
-			current = current.Right
-		} else {
-			return current
-		}
-	}
-	return nil
-}
-
-// inorder traverses the tree in order
-func (t *Tree[K, V]) inorder(node *Node[K, V], f func(*Node[K, V])) {
-	if node == nil {
-		return
-	}
-	t.inorder(node.Left, f)
-	f(node)
-	t.inorder(node.Right, f)
-}
-
-// preorder traverses the tree in preorder
-func (t *Tree[K, V]) preorder(node *Node[K, V], f func(*Node[K, V])) {
-	if node == nil {
-		return
-	}
-	f(node)
-	t.preorder(node.Left, f)
-	t.preorder(node.Right, f)
-}
-
-// postorder traverses the tree in postorder
-func (t *Tree[K, V]) postorder(node *Node[K, V], f func(*Node[K, V])) {
-	if node == nil {
-		return
-	}
-	t.postorder(node.Left, f)
-	t.postorder(node.Right, f)
-	f(node)
-}
-
-// min returns the minimum node in the tree
-func (t *Tree[K, V]) min(node *Node[K, V]) *Node[K, V] {
-	if node == nil {
-		return nil
-	}
-	for node.Left != nil {
-		node = node.Left
-	}
-	return node
-}
-
-// max returns the maximum node in the tree
-func (t *Tree[K, V]) max(node *Node[K, V]) *Node[K, V] {
-	if node == nil {
-		return nil
-	}
-	for node.Right != nil {
-		node = node.Right
-	}
-	return node
-}
-
-// successor returns the successor of the given node
-func (t *Tree[K, V]) successor(node *Node[K, V]) *Node[K, V] {
-	if node.Right != nil {
-		return t.min(node.Right)
-	}
-	parent := node.Parent
-	for parent != nil && node == parent.Right {
-		node = parent
-		parent = parent.Parent
-	}
-	return parent
-}
-
-// predecessor returns the predecessor of the given node
-func (t *Tree[K, V]) predecessor(node *Node[K, V]) *Node[K, V] {
-	if node.Left != nil {
-		return t.max(node.Left)
-	}
-	parent := node.Parent
-	for parent != nil && node == parent.Left {
-		node = parent
-		parent = parent.Parent
-	}
-	return parent
-}
-
-// draw draws the tree
-func (t *Tree[K, V]) draw(node *Node[K, V], level int) {
-	if node == nil {
-		return
-	}
-	t.draw(node.Right, level+1)
-	for i := 0; i < level; i++ {
-		fmt.Print("    ")
-	}
-	fmt.Println(node.Key)
-	t.draw(node.Left, level+1)
+	fmt.Println(str)
 }
 
 // -----------------------------------------public methods-----------------------------------------
 
-// String returns a string representation of container
-func (t *Tree[K, V]) String() string {
-	str := "tree: "
-	t.inorder(t.root, func(node *Node[K, V]) {
-		str += fmt.Sprintf("%v ", node.Key)
-	})
-	return str
+func (t *Tree[V]) Insert(val V) {
+	t.insertFromRoot(val)
 }
 
-// Insert inserts the given key and value into the tree
-func (t *Tree[K, V]) Put(key K, value V) {
-	t.insert(newNode(key, value))
-}
-
-// Delete deletes the given key from the tree
-func (t *Tree[K, V]) Delete(key K) {
-	node := t.root
-	for node != nil {
-		if t.less(key, node.Key) {
-			node = node.Left
-		} else if t.less(node.Key, key) {
-			node = node.Right
+func output[V any](node *Node[V], prefix string, isTail bool, str *string) {
+	if node.Child[1] != nil {
+		newPrefix := prefix
+		if isTail {
+			newPrefix += "│   "
 		} else {
-			t.delete(node)
-			return
+			newPrefix += "    "
 		}
+		output(node.Child[1], newPrefix, false, str)
 	}
-}
-
-// Get returns the value associated with the given key
-func (t *Tree[K, V]) Get(key K) (V, bool) {
-	node := t.root
-	for node != nil {
-		if t.less(key, node.Key) {
-			node = node.Left
-		} else if t.less(node.Key, key) {
-			node = node.Right
+	*str += prefix
+	if isTail {
+		*str += "└── "
+	} else {
+		*str += "┌── "
+	}
+	*str += node.String() + "\n"
+	if node.Child[0] != nil {
+		newPrefix := prefix
+		if isTail {
+			newPrefix += "    "
 		} else {
-			return node.Value, true
+			newPrefix += "│   "
 		}
+		output(node.Child[0], newPrefix, true, str)
 	}
-	return *new(V), false
-}
-
-// Min returns the minimum key and value in the tree
-func (t *Tree[K, V]) Min() (K, V, bool) {
-	node := t.root
-	if node == nil {
-		return *new(K), *new(V), false
-	}
-	for node.Left != nil {
-		node = node.Left
-	}
-	return node.Key, node.Value, true
-}
-
-// Max returns the maximum key and value in the tree
-func (t *Tree[K, V]) Max() (K, V, bool) {
-	node := t.root
-	if node == nil {
-		return *new(K), *new(V), false
-	}
-	for node.Right != nil {
-		node = node.Right
-	}
-	return node.Key, node.Value, true
-}
-
-// Floor returns the largest key less than or equal to the given key
-func (t *Tree[K, V]) Floor(key K) (K, V, bool) {
-	node := t.root
-	if node == nil {
-		return *new(K), *new(V), false
-	}
-	var floor *Node[K, V]
-	for node != nil {
-		if t.less(key, node.Key) {
-			node = node.Left
-		} else if t.less(node.Key, key) {
-			floor = node
-			node = node.Right
-		} else {
-			return node.Key, node.Value, true
-		}
-	}
-	if floor == nil {
-		return *new(K), *new(V), false
-	}
-	return floor.Key, floor.Value, true
-}
-
-// Ceiling returns the smallest key greater than or equal to the given key
-func (t *Tree[K, V]) Ceiling(key K) (K, V, bool) {
-	node := t.root
-	if node == nil {
-		return *new(K), *new(V), false
-	}
-	var ceiling *Node[K, V]
-	for node != nil {
-		if t.less(key, node.Key) {
-			ceiling = node
-			node = node.Left
-		} else if t.less(node.Key, key) {
-			node = node.Right
-		} else {
-			return node.Key, node.Value, true
-		}
-	}
-
-	if ceiling == nil {
-		return *new(K), *new(V), false
-	}
-
-	return ceiling.Key, ceiling.Value, true
-}
-
-// Select returns the key and value of the given rank
-func (t *Tree[K, V]) Select(rank int) (K, V, bool) {
-	//implement later
-	return *new(K), *new(V), false
-}
-
-// Rank returns the rank of the given key
-func (t *Tree[K, V]) Rank(key K) int {
-	//implement later
-	return 0
-}
-
-// Size returns the number of keys in the tree
-func (t *Tree[K, V]) Size() int {
-	return t.size
-}
-
-// IsEmpty returns true if the tree is empty
-func (t *Tree[K, V]) IsEmpty() bool {
-	return t.size == 0
-}
-
-// Do calls the function f on every element of the tree in inorder
-func (t *Tree[K, V]) Do(f func(K, V)) {
-	t.inorder(t.root, func(node *Node[K, V]) {
-		f(node.Key, node.Value)
-	})
-}
-
-// DoPreorder calls the function f on every element of the tree in preorder
-func (t *Tree[K, V]) DoPreorder(f func(K, V)) {
-	t.preorder(t.root, func(node *Node[K, V]) {
-		f(node.Key, node.Value)
-	})
-}
-
-// DoPostorder calls the function f on every element of the tree in postorder
-func (t *Tree[K, V]) DoPostorder(f func(K, V)) {
-	t.postorder(t.root, func(node *Node[K, V]) {
-		f(node.Key, node.Value)
-	})
-}
-
-// Keys returns a slice of all keys in the tree
-func (t *Tree[K, V]) Keys() []K {
-	keys := make([]K, t.size)
-	i := 0
-	t.inorder(t.root, func(node *Node[K, V]) {
-		keys[i] = node.Key
-		i++
-	})
-	return keys
-}
-
-// KeysInRange returns a slice of all keys in the tree in the given range
-func (t *Tree[K, V]) KeysInRange(lo, hi K) []K {
-	keys := make([]K, 0)
-	t.inorder(t.root, func(node *Node[K, V]) {
-		if t.less(node.Key, lo) {
-			return
-		}
-		if t.less(hi, node.Key) {
-			return
-		}
-		keys = append(keys, node.Key)
-	})
-	return keys
-}
-
-// Values returns a slice of all values in the tree
-func (t *Tree[K, V]) Values() []V {
-	values := make([]V, t.size)
-	i := 0
-	t.inorder(t.root, func(node *Node[K, V]) {
-		values[i] = node.Value
-		i++
-	})
-	return values
-}
-
-// ValuesInRange returns a slice of all values in the tree in the given range
-func (t *Tree[K, V]) ValuesInRange(lo, hi K) []V {
-	values := make([]V, 0)
-	t.inorder(t.root, func(node *Node[K, V]) {
-		if t.less(node.Key, lo) {
-			return
-		}
-		if t.less(hi, node.Key) {
-			return
-		}
-		values = append(values, node.Value)
-	})
-	return values
-}
-
-// DeleteMin deletes the minimum key and value in the tree
-func (t *Tree[K, V]) DeleteMin() {
-	t.delete(t.min(t.root))
-}
-
-// DeleteMax deletes the maximum key and value in the tree
-func (t *Tree[K, V]) DeleteMax() {
-	t.delete(t.max(t.root))
-}
-
-// Draw prints the tree to stdout
-func (t *Tree[K, V]) Draw() {
-	t.draw(t.root, 0)
 }
