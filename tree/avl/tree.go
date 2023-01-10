@@ -101,34 +101,36 @@ func (t *Tree[V]) rotateLeftRight(node *Node[V]) *Node[V] {
 func (t *Tree[V]) insert(node *Node[V], val V) (*Node[V], bool) {
 
 	// 0 : false, 1: true
-	var isRotated bool
+	var isHeightChanged bool
 	if node == nil {
-		return NewNode(val), isRotated
+		return NewNode(val), true
 	}
 
 	if t.less(val, node.Value) {
 
-		node.Child[LEFT], isRotated = t.insert(node.Child[LEFT], val)
+		node.Child[LEFT], isHeightChanged = t.insert(node.Child[LEFT], val)
 		node.Child[LEFT].Parent = node
 
-		// if the child left is rotated, then we don't need to rotate the parent. BFactor is already updated
-		if !isRotated {
+		// after insertion, if the height of the left subtree is changed, we need to change to balance factor of the parent.
+		//In insertion, insert a node either make the tree "more balance" or grow the tree. After insertion, if the balance factor
+		//is 0, the height is not changed, otherwise, the height is changed.
+		if isHeightChanged {
 			node.bFactor++
+			isHeightChanged = !(node.bFactor == 0)
 		}
 
 	} else {
 
-		node.Child[RIGHT], isRotated = t.insert(node.Child[RIGHT], val)
+		node.Child[RIGHT], isHeightChanged = t.insert(node.Child[RIGHT], val)
 		node.Child[RIGHT].Parent = node
 
-		// if the child right is rotated, then we don't need to rotate the parent. BFactor is already updated
-		if !isRotated {
+		if isHeightChanged {
+
 			node.bFactor--
+			isHeightChanged = !(node.bFactor == 0)
 		}
 
 	}
-
-	t.output()
 
 	//bFactor = 0 => balance
 	//bFactor = 1 => left heavy
@@ -146,13 +148,12 @@ func (t *Tree[V]) insert(node *Node[V], val V) (*Node[V], bool) {
 			node.Child[LEFT].bFactor = 0
 			node = t.rotateLeftRight(node)
 		}
-		return node, true
+		return node, false
 	} else if node.bFactor < -1 {
 		if node.Child[RIGHT].bFactor < 0 {
 			//right right case
 			node.bFactor = 0
 			node = t.rotateLeft(node)
-			t.output()
 			node.bFactor = 0
 		} else {
 			//right left case
@@ -161,10 +162,10 @@ func (t *Tree[V]) insert(node *Node[V], val V) (*Node[V], bool) {
 			node = t.rotateRightLeft(node)
 
 		}
-		return node, true
+		return node, false
 	}
 
-	return node, false
+	return node, isHeightChanged
 
 }
 
@@ -197,51 +198,57 @@ func (t *Tree[V]) predecessor(node *Node[V]) *Node[V] {
 }
 
 // delete delete val from a tree t
-func (t *Tree[V]) delete(node *Node[V], val V) (*Node[V], bool) {
-
-	isRotated := false
+func (t *Tree[V]) delete(node *Node[V], val V) (*Node[V], int8) {
+	//Before deletion
+	var hChanged int8
 	if node == nil {
-		return node, isRotated
+		return node, 0
 	}
 
-	if t.less(val, node.Value) {
-		node.Child[LEFT], isRotated = t.delete(node.Child[LEFT], val)
-		if !isRotated {
+	//Delete the node
 
-		}
+	if t.less(val, node.Value) {
+		node.Child[LEFT], hChanged = t.delete(node.Child[LEFT], val)
+		node.bFactor -= hChanged
 
 	} else if t.less(node.Value, val) {
-		node.Child[RIGHT], isRotated = t.delete(node.Child[RIGHT], val)
-		if !isRotated {
-			node.bFactor++
-		}
+		node.Child[RIGHT], hChanged = t.delete(node.Child[RIGHT], val)
+		node.bFactor += hChanged
 	} else {
 
 		//the node has no child
 		if node.Child[LEFT] == nil && node.Child[RIGHT] == nil {
+			node.Parent = nil //delete the node
 			node = nil
+			return node, 1
 		} else if node.Child[RIGHT] == nil {
 			//the node has only left child
-			node = node.Child[LEFT]
+			node.Child[LEFT].Parent = node.Parent
 			node.Parent = nil
+			node = node.Child[LEFT]
+			hChanged = 1
 		} else if node.Child[LEFT] == nil {
 			//the node has only right child
-			node = node.Child[RIGHT]
+			node.Child[RIGHT].Parent = node.Parent
 			node.Parent = nil
+			node = node.Child[RIGHT]
+			hChanged = 1
 		} else {
 			//the node has both left and right child
 			//find the successor
 			successor := t.successor(node)
 			node.Value = successor.Value
-			node.Child[RIGHT], _ = t.delete(node.Child[RIGHT].Parent, successor.Value)
+			node.Child[RIGHT], hChanged = t.delete(node.Child[RIGHT], successor.Value)
 
 		}
 
 	}
 
+	//After deletion
+
 	//if the node has only one child, then the node is the successor
 	if node == nil {
-		return node, false
+		return node, 1
 	}
 
 	//update the bFactor
@@ -261,8 +268,9 @@ func (t *Tree[V]) delete(node *Node[V], val V) (*Node[V], bool) {
 			node.bFactor = 0
 			node.Child[LEFT].bFactor = 0
 			node = t.rotateLeftRight(node)
+			hChanged = 1
 		}
-		return node, true
+
 	} else if node.bFactor < -1 {
 		if node.Child[RIGHT].bFactor == 0 {
 			//L0 case
@@ -279,11 +287,12 @@ func (t *Tree[V]) delete(node *Node[V], val V) (*Node[V], bool) {
 			node.bFactor = 0
 			node.Child[RIGHT].bFactor = 0
 			node = t.rotateRightLeft(node)
+			hChanged = 1
 		}
-		return node, true
+
 	}
 
-	return node, false
+	return node, hChanged
 
 }
 
