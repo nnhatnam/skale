@@ -7,11 +7,11 @@ import (
 
 func TestAVLTree(t *testing.T) {
 	avltree := NewOrdered[int]()
-	avltree.Insert(5)
-	avltree.Insert(4)
-	avltree.Insert(7)
-	avltree.Insert(6)
-	avltree.Insert(8)
+	avltree.InsertNoReplace(5)
+	avltree.InsertNoReplace(4)
+	avltree.InsertNoReplace(7)
+	avltree.InsertNoReplace(6)
+	avltree.InsertNoReplace(8)
 	str := "AVLTree\n"
 
 	output[int](avltree.root, "", true, &str)
