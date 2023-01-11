@@ -18,10 +18,6 @@ type Node[K, V any] struct {
 	Left, Right, Parent *Node[K, V]
 }
 
-func (t *Node[K, V]) GetKey() K {
-	return t.Key
-}
-
 func NewNode[K, V any](key K, value V) *Node[K, V] {
 	return &Node[K, V]{Key: key, Value: value, color: RED}
 }
@@ -401,6 +397,6 @@ func (t *Tree[K, V]) PostorderTraverse() {
 }
 
 // Print prints the tree
-func (t *Tree[K, V]) Print() {
-	t.print()
-}
+//func (t *Tree[K, V]) Print() {
+//	t.print(t.root, 0)
+//}
