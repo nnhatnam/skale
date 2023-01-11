@@ -160,6 +160,66 @@ func max[T any](n *Node[T]) *Node[T] {
 	return n
 }
 
+func inOrder[T any](n *Node[T], iterator Iterator[T]) {
+	if n == nil {
+		return
+	}
+
+	inOrder(n.Left, iterator)
+	iterator(n.Value)
+	inOrder(n.Right, iterator)
+}
+
+func inOrderReverse[T any](n *Node[T], iterator Iterator[T]) {
+	if n == nil {
+		return
+	}
+
+	inOrderReverse(n.Right, iterator)
+	iterator(n.Value)
+	inOrderReverse(n.Left, iterator)
+}
+
+func preOrder[T any](n *Node[T], iterator Iterator[T]) {
+	if n == nil {
+		return
+	}
+
+	iterator(n.Value)
+	preOrder(n.Left, iterator)
+	preOrder(n.Right, iterator)
+}
+
+func preOrderReverse[T any](n *Node[T], iterator Iterator[T]) {
+	if n == nil {
+		return
+	}
+
+	iterator(n.Value)
+	preOrderReverse(n.Right, iterator)
+	preOrderReverse(n.Left, iterator)
+}
+
+func postOrder[T any](n *Node[T], iterator Iterator[T]) {
+	if n == nil {
+		return
+	}
+
+	postOrder(n.Left, iterator)
+	postOrder(n.Right, iterator)
+	iterator(n.Value)
+}
+
+func postOrderReverse[T any](n *Node[T], iterator Iterator[T]) {
+	if n == nil {
+		return
+	}
+
+	postOrderReverse(n.Right, iterator)
+	postOrderReverse(n.Left, iterator)
+	iterator(n.Value)
+}
+
 // find the node with value val in tree t, return the node
 func (t *AVL[T]) find(val T) (_ *Node[T]) {
 	curr := t.root
@@ -173,6 +233,126 @@ func (t *AVL[T]) find(val T) (_ *Node[T]) {
 		}
 	}
 	return nil
+}
+
+func (t *AVL[T]) ascendLessThan(n *Node[T], pivot T, iterator Iterator[T]) bool {
+	if n == nil {
+		return true
+	}
+
+	if !t.ascendLessThan(n.Left, pivot, iterator) {
+		return false
+	}
+	if t.less(n.Value, pivot) {
+		if !iterator(n.Value) {
+			return false
+		}
+		return t.ascendLessThan(n.Right, pivot, iterator)
+	}
+
+	return true
+}
+
+func (t *AVL[T]) ascendGreaterOrEqual(n *Node[T], pivot T, iterator Iterator[T]) bool {
+	if n == nil {
+		return true
+	}
+
+	if t.less(pivot, n.Value) {
+		if !t.ascendGreaterOrEqual(n.Left, pivot, iterator) {
+			return false
+		}
+
+		if !iterator(n.Value) {
+			return false
+		}
+	}
+
+	return t.ascendGreaterOrEqual(n.Right, pivot, iterator)
+
+}
+
+func (t *AVL[T]) ascendRange(n *Node[T], start, end T, iterator Iterator[T]) bool {
+	if n == nil {
+		return true
+	}
+	if t.less(end, n.Value) {
+		return t.ascendRange(n.Left, start, end, iterator)
+	}
+
+	if t.less(n.Value, start) {
+		return t.ascendRange(n.Right, start, end, iterator)
+	}
+
+	if !t.ascendRange(n.Left, start, end, iterator) {
+		return false
+	}
+
+	if !iterator(n.Value) {
+		return false
+	}
+	return t.ascendRange(n.Right, start, end, iterator)
+}
+
+func (t *AVL[T]) descendGreaterThan(n *Node[T], pivot T, iterator Iterator[T]) bool {
+	if n == nil {
+		return true
+	}
+
+	if !t.descendGreaterThan(n.Right, pivot, iterator) {
+		return false
+	}
+
+	if t.less(pivot, n.Value) {
+		if !iterator(n.Value) {
+			return false
+		}
+		return t.descendGreaterThan(n.Left, pivot, iterator)
+	}
+
+	return true
+}
+
+func (t *AVL[T]) descendLessOrEqual(n *Node[T], pivot T, iterator Iterator[T]) bool {
+	if n == nil {
+		return true
+	}
+
+	if t.less(n.Value, pivot) {
+		if !t.descendLessOrEqual(n.Right, pivot, iterator) {
+			return false
+		}
+
+		if !iterator(n.Value) {
+			return false
+		}
+	}
+
+	return t.descendLessOrEqual(n.Left, pivot, iterator)
+}
+
+func (t *AVL[T]) descendRange(n *Node[T], start, end T, iterator Iterator[T]) bool {
+	if n == nil {
+		return true
+	}
+
+	if t.less(n.Value, start) {
+		return t.descendRange(n.Right, start, end, iterator)
+	}
+
+	if t.less(end, n.Value) {
+		return t.descendRange(n.Left, start, end, iterator)
+	}
+
+	if !t.descendRange(n.Right, start, end, iterator) {
+		return false
+	}
+
+	if !iterator(n.Value) {
+		return false
+	}
+
+	return t.descendRange(n.Left, start, end, iterator)
 }
 
 func (t *AVL[T]) insertNoReplace(n *Node[T], val T) *Node[T] {
@@ -304,6 +484,46 @@ func (t *AVL[T]) Has(val T) bool {
 	return ok
 }
 
+// Max returns the maximum value in the tree
+func (t *AVL[T]) Max() (T, bool) {
+	if t.root == nil {
+		return *new(T), false
+	}
+	return max(t.root).Value, true
+}
+
+// Min returns the minimum value in the tree
+func (t *AVL[T]) Min() (T, bool) {
+	if t.root == nil {
+		return *new(T), false
+	}
+	return min(t.root).Value, true
+}
+
+func (t *AVL[T]) AscendLessThan(pivot T, iterator Iterator[T]) {
+	t.ascendLessThan(t.root, pivot, iterator)
+}
+
+func (t *AVL[T]) AscendGreaterOrEqual(pivot T, iterator Iterator[T]) {
+	t.ascendGreaterOrEqual(t.root, pivot, iterator)
+}
+
+func (t *AVL[T]) AscendRange(start, end T, iterator Iterator[T]) {
+	t.ascendRange(t.root, start, end, iterator)
+}
+
+func (t *AVL[T]) DescendGreaterThan(pivot T, iterator Iterator[T]) {
+	t.descendGreaterThan(t.root, pivot, iterator)
+}
+
+func (t *AVL[T]) DescendLessOrEqual(pivot T, iterator Iterator[T]) {
+	t.descendLessOrEqual(t.root, pivot, iterator)
+}
+
+func (t *AVL[T]) DescendRange(start, end T, iterator Iterator[T]) {
+	t.descendRange(t.root, start, end, iterator)
+}
+
 func (t *AVL[T]) InsertNoReplace(val T) {
 	t.count++
 	t.root = t.insertNoReplace(t.root, val)
@@ -328,6 +548,52 @@ func (t *AVL[T]) Delete(val T) (T, bool) {
 		t.count--
 	}
 	return oldVal, found
+}
+
+func (t *AVL[T]) DeleteMax() (T, bool) {
+	//temporary solution
+	var zero T
+	if t.root == nil {
+		return zero, false
+	}
+	max := max(t.root)
+	t.Delete(max.Value)
+	return max.Value, true
+}
+
+func (t *AVL[T]) DeleteMin() (T, bool) {
+	var zero T
+	if t.root == nil {
+		return zero, false
+	}
+	min := min(t.root)
+	t.Delete(min.Value)
+	return min.Value, true
+}
+
+func (t *AVL[T]) InOrder(iterator Iterator[T], reverse bool) {
+	if reverse {
+		inOrderReverse(t.root, iterator)
+	} else {
+		inOrder(t.root, iterator)
+	}
+
+}
+
+func (t *AVL[T]) PreOrder(iterator Iterator[T], reverse bool) {
+	if reverse {
+		preOrderReverse(t.root, iterator)
+	} else {
+		preOrder(t.root, iterator)
+	}
+}
+
+func (t *AVL[T]) PostOrder(iterator Iterator[T], reverse bool) {
+	if reverse {
+		postOrderReverse(t.root, iterator)
+	} else {
+		postOrder(t.root, iterator)
+	}
 }
 
 func output[T any](node *Node[T], prefix string, isTail bool, str *string) {
