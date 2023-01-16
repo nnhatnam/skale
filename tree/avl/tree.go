@@ -72,21 +72,28 @@ func rotateRightLeft[T any](n *Node[T]) *Node[T] {
 func insertFix[T any](n *Node[T]) *Node[T] {
 
 	if n.bFactor > 1 {
-		n.bFactor = 0
+
 		if n.Left.bFactor > 0 {
+			n.bFactor = 0
 			n = rotateRight(n)
-		} else { // n.Left.bFactor < 0 , there is no case n.Left.bFactor == 0
-			n.Left.bFactor = 0
+
+		} else {
+
+			n.bFactor = -maxInt8(n.Left.Right.bFactor, 0) //n.bFactor = n.bFactor - 2 - maxInt8(n.Left.Right.bFactor, 0)
+			n.Left.bFactor = n.Left.bFactor + 1 - minInt8(n.Left.Right.bFactor, 0)
 			n = rotateLeftRight(n)
 		}
 		n.bFactor = 0
 
 	} else if n.bFactor < 1 {
-		n.bFactor = 0
+
 		if n.Right.bFactor < 0 {
+			n.bFactor = 0
 			n = rotateLeft(n)
-		} else { // n.Right.bFactor > 0 , there is no case n.Right.bFactor == 0
-			n.Right.bFactor = 0
+		} else { // n.Right.bFactor == 1 , there is no case n.Right.bFactor == 0
+
+			n.bFactor = -minInt8(n.Right.Left.bFactor, 0) //n.bFactor = n.bFactor + 2 - minInt8(n.Right.Left.bFactor, 0)
+			n.Right.bFactor = n.Right.bFactor - 1 - maxInt8(n.Right.Left.bFactor, 0)
 			n = rotateRightLeft(n)
 		}
 		n.bFactor = 0
@@ -109,13 +116,14 @@ func deleteFix[T any](n *Node[T]) (_ *Node[T], hChanged int8) {
 			n.bFactor = 0
 			n = rotateRight(n)
 			n.bFactor = 0
+			hChanged = 1
 		} else {
 			//R-1 rotation
 			n.bFactor = 0
 			n.Left.bFactor = 0
 			n = rotateLeftRight(n)
 			n.bFactor = 0
-			hChanged = 1
+			hChanged = 1 // height of the tree is changed
 		}
 
 	} else if n.bFactor < -1 {
@@ -129,13 +137,14 @@ func deleteFix[T any](n *Node[T]) (_ *Node[T], hChanged int8) {
 			n.bFactor = 0
 			n = rotateLeft(n)
 			n.bFactor = 0
+			hChanged = 1
 		} else {
 			//L1 rotation
 			n.bFactor = 0
 			n.Right.bFactor = 0
 			n = rotateRightLeft(n)
 			n.bFactor = 0
-			hChanged = 1
+			hChanged = 1 // height of the tree is changed
 		}
 	}
 
@@ -143,7 +152,7 @@ func deleteFix[T any](n *Node[T]) (_ *Node[T], hChanged int8) {
 }
 
 // min returns the minimum node in the tree with root n
-func min[T any](n *Node[T]) *Node[T] {
+func findMin[T any](n *Node[T]) *Node[T] {
 	for n.Left != nil {
 		n = n.Left
 	}
@@ -152,7 +161,7 @@ func min[T any](n *Node[T]) *Node[T] {
 }
 
 // max return the maximum node in the tree with root n
-func max[T any](n *Node[T]) *Node[T] {
+func findMax[T any](n *Node[T]) *Node[T] {
 	for n.Right != nil {
 		n = n.Right
 	}
@@ -258,7 +267,7 @@ func (t *AVL[T]) ascendGreaterOrEqual(n *Node[T], pivot T, iterator Iterator[T])
 		return true
 	}
 
-	if t.less(pivot, n.Value) {
+	if t.less(n.Value, pivot) {
 		if !t.ascendGreaterOrEqual(n.Left, pivot, iterator) {
 			return false
 		}
@@ -388,76 +397,140 @@ func (t *AVL[T]) insertNoReplace(n *Node[T], val T) *Node[T] {
 
 }
 
-func (t *AVL[T]) replaceOrInsert(n *Node[T], val T) (_ *Node[T], _ T, insertCount int8) {
+func (t *AVL[T]) replaceOrInsert(n *Node[T], val T, oldVal **T) (_ *Node[T], hChanged int8) {
 
 	if n == nil {
-		return NewNode(val), *new(T), 1
+		return NewNode(val), 1
 	}
 
-	var oldVal T
-
 	if t.less(val, n.Value) {
-		l := n.Left
-		n.Left, oldVal, insertCount = t.replaceOrInsert(n.Left, val)
-		if n.Left.bFactor != 0 || l == nil {
-			n.bFactor += insertCount
-		}
+
+		n.Left, hChanged = t.replaceOrInsert(n.Left, val, oldVal)
+		n.bFactor += hChanged
 
 	} else if t.less(n.Value, val) {
-		r := n.Right
-		n.Right, oldVal, insertCount = t.replaceOrInsert(n.Right, val)
-		if n.Right.bFactor != 0 || r == nil {
-			n.bFactor -= insertCount
-		}
+
+		n.Right, hChanged = t.replaceOrInsert(n.Right, val, oldVal)
+		n.bFactor -= hChanged
 
 	} else {
-		oldVal = n.Value
+		*oldVal = &n.Value
 		n.Value = val
-		return n, oldVal, 0
+		return n, 0
 	}
 
 	if n.bFactor > 1 || n.bFactor < -1 {
 
 		n = insertFix(n)
+		hChanged = 0
+
+	} else if hChanged == 1 && n.bFactor == 0 {
+
+		hChanged = 0
 
 	}
 
-	return n, oldVal, insertCount
+	return n, hChanged
 
 }
 
-func (t *AVL[T]) delete(n *Node[T], val T) (_ *Node[T], hChanged int8, found bool) {
+func (t *AVL[T]) delete(n *Node[T], val T, oldVal **T) (_ *Node[T], hChanged int8) {
+
 	if n == nil {
-		return nil, 0, false // not found
+		return nil, 0
 	}
 
 	if t.less(val, n.Value) {
-		n.Left, hChanged, found = t.delete(n.Left, val)
+		n.Left, hChanged = t.delete(n.Left, val, oldVal)
 		n.bFactor -= hChanged
-	} else if t.less(n.Value, val) {
-		n.Right, hChanged, found = t.delete(n.Right, val)
-		n.bFactor += hChanged
-	} else {
-		found = true
-		if n.Left == nil && n.Right == nil {
-			return nil, 1, found // found and deleted
-		} else if n.Right == nil {
-			return n.Left, 1, found
-		} else if n.Left == nil {
-			return n.Right, 1, found
-		} else {
-			succ := min(n.Right)
-			n.Value = succ.Value
-			n.Right, hChanged, _ = t.delete(n.Right, succ.Value)
-		}
 
+	} else if t.less(n.Value, val) {
+		n.Right, hChanged = t.delete(n.Right, val, oldVal)
+		n.bFactor += hChanged
+
+	} else {
+		*oldVal = &n.Value //save the pointer to the value to oldVal
+		if n.Left == nil && n.Right == nil {
+			return nil, 1
+		} else if n.Left == nil {
+			return n.Right, 1
+		} else if n.Right == nil {
+			return n.Left, 1
+		} else {
+			succ := findMin(n.Right)
+			n.Value = succ.Value
+			n.Right, hChanged = t.delete(n.Right, succ.Value, oldVal)
+			n.bFactor += hChanged
+		}
 	}
 
-	return n, hChanged, found
+	//the tree only has one node, height is change from 1 -> 0 after deletion
+	if n == nil {
+		return nil, 1
+	}
+
+	if n.bFactor > 1 || n.bFactor < -1 {
+		return deleteFix(n)
+	} else if hChanged == 1 && n.bFactor != 0 {
+		return n, 0
+	}
+
+	return n, hChanged
 }
 
+//
+//func (t *AVL[T]) delete(n *Node[T], val T) (_ *Node[T], hChanged int8, oldVal T, found bool) {
+//	if n == nil {
+//		return nil, 0, oldVal, false // not found
+//	}
+//
+//	if t.less(val, n.Value) {
+//		n.Left, hChanged, oldVal, found = t.delete(n.Left, val)
+//		n.bFactor -= hChanged
+//	} else if t.less(n.Value, val) {
+//		n.Right, hChanged, oldVal, found = t.delete(n.Right, val)
+//		n.bFactor += hChanged
+//		fmt.Println("nRight: ", n.Right.Value, n.Right.bFactor)
+//	} else {
+//		fmt.Println("found ", n.Value)
+//		t.print()
+//		found = true
+//		oldVal = n.Value
+//		if n.Left == nil && n.Right == nil {
+//			return nil, 1, oldVal, found // found and deleted
+//		} else if n.Right == nil {
+//			return n.Left, 1, oldVal, found
+//		} else if n.Left == nil {
+//			return n.Right, 1, oldVal, found
+//		} else {
+//			succ := min(n.Right)
+//			n.Value = succ.Value
+//			n.Right, hChanged, _, _ = t.delete(n.Right, succ.Value)
+//			n.bFactor += hChanged
+//			fmt.Println("after delete succ ", hChanged)
+//		}
+//
+//	}
+//
+//	if n == nil {
+//		return nil, 1, oldVal, found
+//	}
+//
+//	if n.bFactor > 1 || n.bFactor < -1 {
+//		n, hChanged = deleteFix(n)
+//	}
+//
+//	return n, hChanged, oldVal, found
+//}
+
 func (t *AVL[T]) print() {
+
 	str := "AVLTree\n"
+	if t.root == nil {
+		fmt.Println("nil")
+		return
+	}
+
 	output(t.root, "", true, &str)
 	fmt.Println(str)
 }
@@ -489,7 +562,7 @@ func (t *AVL[T]) Max() (T, bool) {
 	if t.root == nil {
 		return *new(T), false
 	}
-	return max(t.root).Value, true
+	return findMax(t.root).Value, true
 }
 
 // Min returns the minimum value in the tree
@@ -497,7 +570,7 @@ func (t *AVL[T]) Min() (T, bool) {
 	if t.root == nil {
 		return *new(T), false
 	}
-	return min(t.root).Value, true
+	return findMin(t.root).Value, true
 }
 
 func (t *AVL[T]) AscendLessThan(pivot T, iterator Iterator[T]) {
@@ -529,25 +602,28 @@ func (t *AVL[T]) InsertNoReplace(val T) {
 	t.root = t.insertNoReplace(t.root, val)
 }
 
-func (t *AVL[T]) ReplaceOrInsert(val T) (T, bool) {
-	var oldVal T
-	var insertCount int8
-	t.root, oldVal, insertCount = t.replaceOrInsert(t.root, val)
+func (t *AVL[T]) ReplaceOrInsert(val T) (_ T, _ bool) {
+	var oldVal *T
 
-	if insertCount > 0 {
+	t.root, _ = t.replaceOrInsert(t.root, val, &oldVal)
+
+	if oldVal == nil {
 		t.count++
+		return
 	}
-	return oldVal, insertCount == 0
+	return *oldVal, true
 }
 
-func (t *AVL[T]) Delete(val T) (T, bool) {
-	var oldVal T
-	var found bool
-	t.root, _, found = t.delete(t.root, val)
-	if found {
+func (t *AVL[T]) Delete(val T) (_ T, _ bool) {
+
+	var oldVal *T
+	t.root, _ = t.delete(t.root, val, &oldVal)
+
+	if oldVal != nil {
 		t.count--
+		return *oldVal, true // found and deleted
 	}
-	return oldVal, found
+	return
 }
 
 func (t *AVL[T]) DeleteMax() (T, bool) {
@@ -556,7 +632,7 @@ func (t *AVL[T]) DeleteMax() (T, bool) {
 	if t.root == nil {
 		return zero, false
 	}
-	max := max(t.root)
+	max := findMax(t.root)
 	t.Delete(max.Value)
 	return max.Value, true
 }
@@ -566,7 +642,7 @@ func (t *AVL[T]) DeleteMin() (T, bool) {
 	if t.root == nil {
 		return zero, false
 	}
-	min := min(t.root)
+	min := findMin(t.root)
 	t.Delete(min.Value)
 	return min.Value, true
 }
