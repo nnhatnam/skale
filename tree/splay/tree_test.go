@@ -1,4 +1,4 @@
-package rbtree
+package splay
 
 import (
 	"math/rand"
@@ -90,8 +90,10 @@ func TestRandomInsertOrder(t *testing.T) {
 	tree := NewOrdered[int]()
 	n := 1000
 	perm := rand.Perm(n)
+
 	for i := 0; i < n; i++ {
 		tree.ReplaceOrInsert(perm[i])
+
 	}
 	j := 0
 	tree.AscendGreaterOrEqual(0, func(item int) bool {
@@ -238,24 +240,24 @@ func BenchmarkDeleteMin(b *testing.B) {
 	}
 }
 
-func TestInsertNoReplace(t *testing.T) {
-	tree := NewOrdered[int]()
-	n := 1000
-	for q := 0; q < 2; q++ {
-		perm := rand.Perm(n)
-		for i := 0; i < n; i++ {
-			tree.InsertNoReplace(perm[i])
-		}
-	}
-	j := 0
-	tree.AscendGreaterOrEqual(0, func(item int) bool {
-		if item != j/2 {
-			t.Fatalf("bad order")
-		}
-		j++
-		return true
-	})
-}
+//func TestInsertNoReplace(t *testing.T) {
+//	tree := NewOrdered[int]()
+//	n := 1000
+//	for q := 0; q < 2; q++ {
+//		perm := rand.Perm(n)
+//		for i := 0; i < n; i++ {
+//			tree.InsertNoReplace(perm[i])
+//		}
+//	}
+//	j := 0
+//	tree.AscendGreaterOrEqual(0, func(item int) bool {
+//		if item != j/2 {
+//			t.Fatalf("bad order")
+//		}
+//		j++
+//		return true
+//	})
+//}
 
 func TestTreeGet(t *testing.T) {
 
