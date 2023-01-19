@@ -270,21 +270,24 @@ func bubbleFix[T any](g *Node[T]) *Node[T] {
 	}
 
 	if isDoubleRed(g.Left) {
+		g.Left.Color += 2
 		g.Color--
 		g.Left.Left.Color--
-		g.Left.Left.Color += 2
-		g.Left = rotateRight(g.Left)
-		g = rotateLeft(g)
+
+		g.Left = rotateLeft(g.Left)
+		g = rotateRight(g)
 		g.Left = bubbleFix(g.Left)
 
 	}
 
 	if isDoubleRed(g.Right) {
+
+		g.Right.Color += 2
+
 		g.Color--
 		g.Right.Right.Color--
-		g.Right.Right.Color += 2
-		g.Right = rotateLeft(g.Right)
-		g = rotateRight(g)
+		g.Right = rotateRight(g.Right)
+		g = rotateLeft(g)
 		g.Right = bubbleFix(g.Right)
 	}
 
@@ -498,7 +501,6 @@ func (t *Rb[T]) remove(n *Node[T]) *Node[T] {
 }
 
 func (t *Rb[T]) delete(n *Node[T], val T) (_ *Node[T], deleted *T) {
-
 	if n == nil {
 		return nil, nil
 	}
@@ -515,7 +517,6 @@ func (t *Rb[T]) delete(n *Node[T], val T) (_ *Node[T], deleted *T) {
 			//bubbling
 			bubbleUp(n)
 			n = bubbleFix(n)
-
 		}
 
 	} else if t.less(n.Value, val) {
@@ -551,7 +552,7 @@ func (t *Rb[T]) delete(n *Node[T], val T) (_ *Node[T], deleted *T) {
 
 	}
 
-	if isDoubleRed(n.Left) || isDoubleRed(n.Right) {
+	if isDoubleBlack(n.Left) || isDoubleBlack(n.Right) {
 		bubbleUp(n)
 		n = bubbleFix(n)
 	}
@@ -658,7 +659,10 @@ func (t *Rb[T]) Delete(val T) (_ T, _ bool) {
 
 	var replaced *T
 	t.root, replaced = t.delete(t.root, val)
-	t.root.Color = black
+
+	if t.root != nil {
+		t.root.Color = black
+	}
 
 	if replaced != nil {
 		t.count--
@@ -739,4 +743,15 @@ func output[T any](node *Node[T], prefix string, isTail bool, str *string) {
 		}
 		output(node.Left, newPrefix, true, str)
 	}
+}
+
+func print[T any](node *Node[T]) {
+	str := "RbTree\n"
+	if node == nil {
+		fmt.Println("nil")
+		return
+	}
+
+	output(node, "", true, &str)
+	fmt.Println(str)
 }

@@ -128,7 +128,7 @@ func TestRandomInsertSequentialDelete(t *testing.T) {
 		tree.ReplaceOrInsert(perm[i])
 	}
 
-	for i := 0; i < 200; i++ {
+	for i := 0; i < n; i++ {
 		tree.Delete(i)
 	}
 
