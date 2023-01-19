@@ -7,15 +7,23 @@ import (
 
 type Iterator[T any] func(item T) bool
 
+const (
+	negativeBlack      = -1
+	red           int8 = 0
+	black         int8 = 1
+	doubleBlack   int8 = 2
+)
+
 type Node[T any] struct {
 	Value               T // value stored in the node
 	Left, Right, Parent *Node[T]
 
-	Black bool
+	Black int8 // 0: red, 1: black, 2: double black
+	Color int8 // -1: negative black , 0: red, 1: black, 2: double black
 }
 
 func (n *Node[T]) String() string {
-	if n.Black {
+	if isBlack(n) {
 		return fmt.Sprintf("%v (black)", n.Value)
 	}
 
@@ -31,7 +39,28 @@ func isRed[T any](n *Node[T]) bool {
 	if n == nil {
 		return false
 	}
-	return !n.Black
+	return n.Black == 0
+}
+
+func isBlack[T any](n *Node[T]) bool {
+	if n == nil {
+		return false
+	}
+	return n.Black == 1
+}
+
+func isDoubleBlack[T any](n *Node[T]) bool {
+	if n == nil {
+		return false
+	}
+	return n.Black == 2
+}
+
+func isNegativeBlack[T any](n *Node[T]) bool {
+	if n == nil {
+		return false
+	}
+	return n.Black == -1
 }
 
 type Rb[T any] struct {
@@ -52,7 +81,7 @@ func NewOrdered[T skale.Ordered]() *Rb[T] {
 
 func rotateLeft[T any](n *Node[T]) *Node[T] {
 	r := n.Right
-	if r.Black {
+	if isBlack(r) {
 		panic("rotating a black link")
 	}
 	n.Right = r.Left
@@ -63,7 +92,7 @@ func rotateLeft[T any](n *Node[T]) *Node[T] {
 
 func rotateRight[T any](n *Node[T]) *Node[T] {
 	l := n.Left
-	if l.Black {
+	if isBlack(l) {
 		panic("rotating a black link")
 	}
 	n.Left = l.Right
@@ -73,11 +102,11 @@ func rotateRight[T any](n *Node[T]) *Node[T] {
 
 }
 
-// @require: g.Left != nil && g.Right != nil
+// @require: g.Left != nil && g.Right != nil. g and its children can't be double black
 func flip[T any](g *Node[T]) {
-	g.Black = !g.Black
-	g.Left.Black = !g.Left.Black
-	g.Right.Black = !g.Right.Black
+	g.Black = g.Black ^ 1
+	g.Left.Black = g.Left.Black ^ 1
+	g.Right.Black = g.Right.Black ^ 1
 }
 
 // min returns the minimum node in the tree with root n
@@ -158,7 +187,7 @@ func postOrderReverse[T any](n *Node[T], iterator Iterator[T]) {
 	iterator(n.Value)
 }
 
-// @require: insertFixUp must be called on grandparent or ancestor of inserted node. it can't be called on inserted node itself or its parent
+// @require: insertFixUp must be called on ancestor of inserted node. it can't be called on inserted node itself or its parent
 func insertFixUp[T any](g *Node[T]) *Node[T] {
 
 	if isRed(g.Left) && isRed(g.Right) {
@@ -184,6 +213,155 @@ func insertFixUp[T any](g *Node[T]) *Node[T] {
 	}
 
 	return g
+}
+
+func bubbleUp[T any](n *Node[T]) {
+	n.Black++
+	if n.Left != nil {
+		n.Left.Black--
+	}
+
+	if n.Right != nil {
+		n.Right.Black--
+	}
+
+}
+
+func bubbleDown[T any](n *Node[T]) {
+	n.Black--
+	if n.Left != nil {
+		n.Left.Black++
+	}
+
+	if n.Right != nil {
+		n.Right.Black++
+	}
+
+}
+
+func bubbleFix[T any](g *Node[T]) *Node[T] {
+
+	if isRed(g.Left) && isRed(g.Left.Left) {
+		g = rotateRight(g)
+		bubbleDown(g)
+	}
+
+	if isRed(g.Right) && isRed(g.Right.Right) {
+		g = rotateLeft(g)
+		bubbleDown(g)
+	}
+
+	if isRed(g.Left) && isRed(g.Left.Right) {
+		g.Left = rotateLeft(g.Left)
+		g = rotateRight(g)
+		bubbleDown(g)
+	}
+
+	if isRed(g.Right) && isRed(g.Right.Left) {
+		g.Right = rotateRight(g.Right)
+		g = rotateLeft(g)
+		bubbleDown(g)
+	}
+
+	if isNegativeBlack(g.Left) {
+		g.Black--
+		g.Left.Left.Black--
+		g.Left.Left.Black += 2
+		g.Left = rotateRight(g.Left)
+		g = rotateLeft(g)
+		g.Left = bubbleFix(g.Left)
+
+	}
+
+	if isNegativeBlack(g.Right) {
+		g.Black--
+		g.Right.Right.Black--
+		g.Right.Right.Black += 2
+		g.Right = rotateLeft(g.Right)
+		g = rotateRight(g)
+		g.Right = bubbleFix(g.Right)
+	}
+
+	return g
+}
+
+func fixNegativeBlackLeft[T any](p *Node[T]) *Node[T] {
+
+	if isBlack(p.Right) {
+		if isRed(p.Right.Right) {
+			p = rotateRight(p)
+		} else if isRed(p.Right.Left) {
+			p.Right = rotateLeft(p.Right)
+			p = rotateRight(p)
+		} else {
+			p.Black++ //red -> black, black -> double black
+			p.Right.Black = red
+		}
+	}
+
+	if isBlack(p) && isBlack(p.Right) {
+		if isRed(p.Right.Right) {
+			p = rotateRight(p)
+		} else if isRed(p.Right.Left) {
+			p.Right = rotateLeft(p.Right)
+			p = rotateRight(p)
+		} else {
+			p.Black = doubleBlack
+			p.Right.Black = red
+		}
+	}
+
+	return p
+}
+
+func moveBlackLeft[T any](p *Node[T]) *Node[T] {
+	if isBlack(p) && isBlack(p.Right) {
+		if isRed(p.Right.Right) {
+			p = rotateRight(p)
+		} else if isRed(p.Right.Left) {
+			p.Right = rotateLeft(p.Right)
+			p = rotateRight(p)
+		} else {
+			p.Black = doubleBlack
+			p.Right.Black = red
+		}
+	}
+	return p
+}
+
+func fixNegativeBlackRight[T any](p *Node[T]) *Node[T] {
+
+	if isRed(p) && isNegativeBlack(p.Left) {
+		p.Left = nil // delete p.Left
+		p.Black = black
+	}
+
+	if isRed(p) && isNegativeBlack(p.Right) {
+		p.Right = nil // delete p.Right
+		p.Black = black
+	}
+
+	return p
+}
+
+func deleteFixUp[T any](p *Node[T]) *Node[T] {
+
+	if isRed(p) && isNegativeBlack(p.Left) {
+		p.Left = nil // delete p.Left
+		p.Black = black
+	}
+
+	if isRed(p) && isNegativeBlack(p.Right) {
+		p.Right = nil // delete p.Right
+		p.Black = black
+	}
+
+	if isBlack(p) && isDoubleBlack(p.Left) {
+		p.Left = nil // delete p.Left
+		p.Black = black
+	}
+
+	return p
 }
 
 // find the node with value val in tree t, return the node
@@ -355,6 +533,23 @@ func (t *Rb[T]) replaceOrInsert(n *Node[T], val T) (_ *Node[T], replaced *T) {
 
 }
 
+func (t *Rb[T]) remove(n *Node[T]) *Node[T] {
+
+	if n.Left == nil && n.Right == nil {
+		return nil
+	}
+
+	if n.Left == nil {
+		return n.Right
+	}
+
+	if n.Right == nil {
+		return n.Left
+	}
+
+	return n
+}
+
 func (t *Rb[T]) delete(n *Node[T], val T) (_ *Node[T], deleted *T) {
 
 	if n == nil {
@@ -362,25 +557,63 @@ func (t *Rb[T]) delete(n *Node[T], val T) (_ *Node[T], deleted *T) {
 	}
 
 	if t.less(val, n.Value) {
-		n.Left, deleted = t.delete(n.Left, val)
-	} else if t.less(n.Value, val) {
-		n.Right, deleted = t.delete(n.Right, val)
-	} else {
-		if n.Left == nil && n.Right == nil {
-			return nil, &n.Value
-		} else if n.Left == nil {
-			return n.Right, &n.Value
-		} else if n.Right == nil {
-			return n.Left, &n.Value
-		} else {
-			deleted = &n.Value
-			succ := findMin(n.Right)
-			n.Value = succ.Value
-			n.Right, _ = t.delete(n.Right, succ.Value)
+		if n.Left == nil {
+			return n, nil // not found
 		}
+		isLBlack := isBlack(n.Left)
+		n.Left, deleted = t.delete(n.Left, val)
+
+		if n.Left == nil && isLBlack { // deleted
+			//n.Right must be present because if it isn't, it will violate the red-black tree property
+			//bubbling
+			bubbleUp(n)
+			n = bubbleFix(n)
+
+		}
+
+	} else if t.less(n.Value, val) {
+		if n.Right == nil {
+			return n, nil // not found
+		}
+		isRBlack := isBlack(n.Right)
+		n.Right, deleted = t.delete(n.Right, val)
+		if n.Left == nil && isRBlack { // deleted
+
+			//bubbling
+			bubbleUp(n)
+			n = bubbleFix(n)
+		}
+
+	} else {
+		deleted = &n.Value
+
+		if n.Left == nil && n.Right == nil {
+			return nil, deleted
+
+		} else if n.Left == nil {
+			n.Right.Black = n.Black + n.Right.Black
+			return n.Right, deleted
+		} else if n.Right == nil {
+			n.Left.Black = n.Left.Black + n.Black
+			return n.Left, deleted
+		} else {
+			s := findMin(n.Right) // find successor
+			n.Value = s.Value
+			n.Right, _ = t.delete(n.Right, s.Value)
+		}
+
 	}
 
-	return nil, deleted
+	if isNegativeBlack(n.Left) || isNegativeBlack(n.Right) {
+		bubbleUp(n)
+		n = bubbleFix(n)
+	}
+
+	n = deleteFixUp(n)
+
+	return n, deleted
+
+	//return nil, deleted
 }
 
 func (t *Rb[T]) print() {
@@ -466,7 +699,7 @@ func (t *Rb[T]) ReplaceOrInsert(val T) (_ T, _ bool) {
 	var replaced *T
 
 	t.root, replaced = t.replaceOrInsert(t.root, val)
-	t.root.Black = true
+	t.root.Black = black
 	if replaced == nil {
 		t.count++
 		return
@@ -476,12 +709,13 @@ func (t *Rb[T]) ReplaceOrInsert(val T) (_ T, _ bool) {
 
 func (t *Rb[T]) Delete(val T) (_ T, _ bool) {
 
-	var oldVal *T
-	t.root, _ = t.delete(t.root, val, &oldVal)
+	var replaced *T
+	t.root, replaced = t.delete(t.root, val)
+	t.root.Black = black
 
-	if oldVal != nil {
+	if replaced != nil {
 		t.count--
-		return *oldVal, true // found and deleted
+		return *replaced, true // found and deleted
 	}
 	return
 }

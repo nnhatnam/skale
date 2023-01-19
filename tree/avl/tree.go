@@ -457,9 +457,9 @@ func (t *AVL[T]) delete(n *Node[T], val T, oldVal **T) (_ *Node[T], hChanged int
 		} else if n.Right == nil {
 			return n.Left, 1
 		} else {
-			succ := findMin(n.Right)
-			n.Value = succ.Value
-			n.Right, hChanged = t.delete(n.Right, succ.Value, oldVal)
+			s := findMin(n.Right)
+			n.Value = s.Value
+			n.Right, hChanged = t.delete(n.Right, s.Value, oldVal)
 			n.bFactor += hChanged
 		}
 	}
