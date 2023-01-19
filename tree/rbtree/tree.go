@@ -8,26 +8,32 @@ import (
 type Iterator[T any] func(item T) bool
 
 const (
-	negativeBlack      = -1
-	red           int8 = 0
-	black         int8 = 1
-	doubleBlack   int8 = 2
+	doubleRed        = -1
+	red         int8 = 0
+	black       int8 = 1
+	doubleBlack int8 = 2
 )
 
 type Node[T any] struct {
-	Value               T // value stored in the node
-	Left, Right, Parent *Node[T]
+	Value       T // value stored in the node
+	Left, Right *Node[T]
 
-	Black int8 // 0: red, 1: black, 2: double black
-	Color int8 // -1: negative black , 0: red, 1: black, 2: double black
+	Color int8 //0: red, 1: black
 }
 
 func (n *Node[T]) String() string {
+
 	if isBlack(n) {
 		return fmt.Sprintf("%v (black)", n.Value)
+	} else if isRed(n) {
+		return fmt.Sprintf("%v (red)", n.Value)
+	} else if isDoubleBlack(n) {
+		return fmt.Sprintf("%v (double black)", n.Value)
+	} else if isDoubleRed(n) {
+		return fmt.Sprintf("%v (double red)", n.Value)
+	} else {
+		return fmt.Sprintf("%v (unknown color)", n.Value)
 	}
-
-	return fmt.Sprintf("%v (red)", n.Value)
 
 }
 
@@ -39,28 +45,28 @@ func isRed[T any](n *Node[T]) bool {
 	if n == nil {
 		return false
 	}
-	return n.Black == 0
+	return n.Color == red
 }
 
 func isBlack[T any](n *Node[T]) bool {
 	if n == nil {
-		return false
+		return true
 	}
-	return n.Black == 1
+	return n.Color == black
 }
 
 func isDoubleBlack[T any](n *Node[T]) bool {
 	if n == nil {
 		return false
 	}
-	return n.Black == 2
+	return n.Color == 2
 }
 
-func isNegativeBlack[T any](n *Node[T]) bool {
+func isDoubleRed[T any](n *Node[T]) bool {
 	if n == nil {
 		return false
 	}
-	return n.Black == -1
+	return n.Color == -1
 }
 
 type Rb[T any] struct {
@@ -79,34 +85,31 @@ func NewOrdered[T skale.Ordered]() *Rb[T] {
 
 // -----------------------------------------internal methods-----------------------------------------
 
+// rotateLeft rotates the node n to the left, and swap the color between the old root (n) and the new root (r)
 func rotateLeft[T any](n *Node[T]) *Node[T] {
 	r := n.Right
-	if isBlack(r) {
-		panic("rotating a black link")
-	}
 	n.Right = r.Left
 	r.Left = n
-	r.Black, n.Black = n.Black, r.Black
+	r.Color, n.Color = n.Color, r.Color
 	return r
 }
 
+// rotateRight rotates the node n to the right, and swap the color between the old root (n) and the new root (l)
 func rotateRight[T any](n *Node[T]) *Node[T] {
 	l := n.Left
-	if isBlack(l) {
-		panic("rotating a black link")
-	}
 	n.Left = l.Right
 	l.Right = n
-	l.Black, n.Black = n.Black, l.Black
+	l.Color, n.Color = n.Color, l.Color
 	return l
 
 }
 
-// @require: g.Left != nil && g.Right != nil. g and its children can't be double black
+// flip flips the color of g and its children from black to red or vice versa
+// @require: children must be present. g and its children must be a valid color (black or red)
 func flip[T any](g *Node[T]) {
-	g.Black = g.Black ^ 1
-	g.Left.Black = g.Left.Black ^ 1
-	g.Right.Black = g.Right.Black ^ 1
+	g.Color = g.Color ^ 1
+	g.Left.Color = g.Left.Color ^ 1
+	g.Right.Color = g.Right.Color ^ 1
 }
 
 // min returns the minimum node in the tree with root n
@@ -215,30 +218,33 @@ func insertFixUp[T any](g *Node[T]) *Node[T] {
 	return g
 }
 
+// bubbleUp moves double black node up the tree until it reaches a red node or the root
 func bubbleUp[T any](n *Node[T]) {
-	n.Black++
+	n.Color++
 	if n.Left != nil {
-		n.Left.Black--
+		n.Left.Color--
 	}
 
 	if n.Right != nil {
-		n.Right.Black--
+		n.Right.Color--
 	}
 
 }
 
+// bubbleDown reverses the effect of bubbleUp
 func bubbleDown[T any](n *Node[T]) {
-	n.Black--
+	n.Color--
 	if n.Left != nil {
-		n.Left.Black++
+		n.Left.Color++
 	}
 
 	if n.Right != nil {
-		n.Right.Black++
+		n.Right.Color++
 	}
 
 }
 
+// bubbleFix cleans up the effect of bubbling
 func bubbleFix[T any](g *Node[T]) *Node[T] {
 
 	if isRed(g.Left) && isRed(g.Left.Left) {
@@ -263,20 +269,20 @@ func bubbleFix[T any](g *Node[T]) *Node[T] {
 		bubbleDown(g)
 	}
 
-	if isNegativeBlack(g.Left) {
-		g.Black--
-		g.Left.Left.Black--
-		g.Left.Left.Black += 2
+	if isDoubleRed(g.Left) {
+		g.Color--
+		g.Left.Left.Color--
+		g.Left.Left.Color += 2
 		g.Left = rotateRight(g.Left)
 		g = rotateLeft(g)
 		g.Left = bubbleFix(g.Left)
 
 	}
 
-	if isNegativeBlack(g.Right) {
-		g.Black--
-		g.Right.Right.Black--
-		g.Right.Right.Black += 2
+	if isDoubleRed(g.Right) {
+		g.Color--
+		g.Right.Right.Color--
+		g.Right.Right.Color += 2
 		g.Right = rotateLeft(g.Right)
 		g = rotateRight(g)
 		g.Right = bubbleFix(g.Right)
@@ -285,80 +291,21 @@ func bubbleFix[T any](g *Node[T]) *Node[T] {
 	return g
 }
 
-func fixNegativeBlackLeft[T any](p *Node[T]) *Node[T] {
-
-	if isBlack(p.Right) {
-		if isRed(p.Right.Right) {
-			p = rotateRight(p)
-		} else if isRed(p.Right.Left) {
-			p.Right = rotateLeft(p.Right)
-			p = rotateRight(p)
-		} else {
-			p.Black++ //red -> black, black -> double black
-			p.Right.Black = red
-		}
-	}
-
-	if isBlack(p) && isBlack(p.Right) {
-		if isRed(p.Right.Right) {
-			p = rotateRight(p)
-		} else if isRed(p.Right.Left) {
-			p.Right = rotateLeft(p.Right)
-			p = rotateRight(p)
-		} else {
-			p.Black = doubleBlack
-			p.Right.Black = red
-		}
-	}
-
-	return p
-}
-
-func moveBlackLeft[T any](p *Node[T]) *Node[T] {
-	if isBlack(p) && isBlack(p.Right) {
-		if isRed(p.Right.Right) {
-			p = rotateRight(p)
-		} else if isRed(p.Right.Left) {
-			p.Right = rotateLeft(p.Right)
-			p = rotateRight(p)
-		} else {
-			p.Black = doubleBlack
-			p.Right.Black = red
-		}
-	}
-	return p
-}
-
-func fixNegativeBlackRight[T any](p *Node[T]) *Node[T] {
-
-	if isRed(p) && isNegativeBlack(p.Left) {
-		p.Left = nil // delete p.Left
-		p.Black = black
-	}
-
-	if isRed(p) && isNegativeBlack(p.Right) {
-		p.Right = nil // delete p.Right
-		p.Black = black
-	}
-
-	return p
-}
-
 func deleteFixUp[T any](p *Node[T]) *Node[T] {
 
-	if isRed(p) && isNegativeBlack(p.Left) {
+	if isRed(p) && isDoubleRed(p.Left) {
 		p.Left = nil // delete p.Left
-		p.Black = black
+		p.Color = black
 	}
 
-	if isRed(p) && isNegativeBlack(p.Right) {
+	if isRed(p) && isDoubleRed(p.Right) {
 		p.Right = nil // delete p.Right
-		p.Black = black
+		p.Color = black
 	}
 
 	if isBlack(p) && isDoubleBlack(p.Left) {
 		p.Left = nil // delete p.Left
-		p.Black = black
+		p.Color = black
 	}
 
 	return p
@@ -591,10 +538,10 @@ func (t *Rb[T]) delete(n *Node[T], val T) (_ *Node[T], deleted *T) {
 			return nil, deleted
 
 		} else if n.Left == nil {
-			n.Right.Black = n.Black + n.Right.Black
+			n.Right.Color = n.Color + n.Right.Color
 			return n.Right, deleted
 		} else if n.Right == nil {
-			n.Left.Black = n.Left.Black + n.Black
+			n.Left.Color = n.Left.Color + n.Color
 			return n.Left, deleted
 		} else {
 			s := findMin(n.Right) // find successor
@@ -604,7 +551,7 @@ func (t *Rb[T]) delete(n *Node[T], val T) (_ *Node[T], deleted *T) {
 
 	}
 
-	if isNegativeBlack(n.Left) || isNegativeBlack(n.Right) {
+	if isDoubleRed(n.Left) || isDoubleRed(n.Right) {
 		bubbleUp(n)
 		n = bubbleFix(n)
 	}
@@ -699,7 +646,7 @@ func (t *Rb[T]) ReplaceOrInsert(val T) (_ T, _ bool) {
 	var replaced *T
 
 	t.root, replaced = t.replaceOrInsert(t.root, val)
-	t.root.Black = black
+	t.root.Color = black
 	if replaced == nil {
 		t.count++
 		return
@@ -711,7 +658,7 @@ func (t *Rb[T]) Delete(val T) (_ T, _ bool) {
 
 	var replaced *T
 	t.root, replaced = t.delete(t.root, val)
-	t.root.Black = black
+	t.root.Color = black
 
 	if replaced != nil {
 		t.count--
