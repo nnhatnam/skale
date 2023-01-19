@@ -1,0 +1,7 @@
+https://matt.might.net/articles/red-black-delete/
+https://horstmann.com/unblog/2011-05-12/blog.html
+https://www.classes.cs.uchicago.edu/archive/2021/winter/22300-1/lectures/RedBlackDelete/index.html
+https://www.usna.edu/Users/cs/crabbe/SI321/current/red-black/red-black.html
+https://www.cs.usfca.edu/~galles/visualization/RedBlack.html
+https://www.cs.purdue.edu/homes/ayg/CS251/slides/chap13c.pdf
+https://www.happycoders.eu/algorithms/red-black-tree-java/
