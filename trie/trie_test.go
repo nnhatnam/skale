@@ -1,6 +1,7 @@
 package trie
 
 import (
+	. "github.com/nnhatnam/skale/list/slice"
 	"testing"
 )
 
@@ -74,9 +75,13 @@ func TestKeysWithPrefix(t *testing.T) {
 		t.Error("Incorrect number of keys with prefix")
 	}
 
-	//if !(string(elems[0]) == "app" && string(elems[1]) == "application" && string(elems[2]) == "apple" && string(elems[3]) == "apply") {
-	//	t.Error("Incorrect keys with prefix")
-	//}
+	Slice[[]rune](elems).SortBy(func(a, b []rune) bool {
+		return string(a) < string(b)
+	})
+
+	if !(string(elems[0]) == "app" && string(elems[1]) == "apple" && string(elems[2]) == "application" && string(elems[3]) == "apply") {
+		t.Error("Incorrect keys with prefix")
+	}
 }
 
 //
