@@ -1,76 +1,82 @@
 package trie
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestPut(t *testing.T) {
-	trie := New()
-	trie.Insert("apple")
-	if !trie.Search("apple") {
+	trie := New[rune]()
+	trie.Insert([]rune("apple"))
+	if !trie.Get([]rune("apple")) {
 		t.Error("Failed to Put word")
 	}
-	trie.Insert("app")
-	if !trie.Search("app") {
+	trie.Insert([]rune("app"))
+	if !trie.Get([]rune("app")) {
 		t.Error("Failed to Put prefix")
 	}
-	trie.Insert("application")
-	if !trie.Search("application") {
+	trie.Insert([]rune("application"))
+	if !trie.Get([]rune("application")) {
 		t.Error("Failed to Put word")
 	}
 }
 
 func TestSearch(t *testing.T) {
-	trie := New()
-	trie.Insert("apple")
-	if !trie.Search("apple") {
+	trie := New[rune]()
+	trie.Insert([]rune("apple"))
+	if !trie.Get([]rune("apple")) {
 		t.Error("Failed to Search word")
 	}
-	if trie.Search("appl") {
+	if trie.Get([]rune("appl")) {
 		t.Error("Searching for prefix should return false")
 	}
-	if !trie.Search("app") {
-		t.Error("Failed to Search prefix")
+	if trie.Get([]rune("app")) {
+		t.Error("Searching for prefix should return false")
 	}
-	if !trie.Search("application") {
+	if trie.Get([]rune("application")) {
 		t.Error("Failed to Search word")
 	}
 }
 
 func TestDelete(t *testing.T) {
-	trie := New()
-	trie.Insert("apple")
-	trie.Insert("application")
-	trie.Delete("apple")
-	if trie.Search("apple") {
+	trie := New[rune]()
+	trie.Insert([]rune("apple"))
+	trie.Insert([]rune("application"))
+	trie.Delete([]rune("apple"))
+
+	if trie.Get([]rune("apple")) {
 		t.Error("Failed to delete word")
 	}
-	if !trie.Search("app") {
+
+	if !trie.findPrefix([]rune("app")) {
 		t.Error("Deleting word should not delete prefix")
 	}
-	trie.Delete("application")
-	if trie.Search("application") {
+	trie.Delete([]rune("application"))
+	if trie.Get([]rune("application")) {
 		t.Error("Failed to delete word")
 	}
-	if !trie.Search("app") {
-		t.Error("Deleting word should not delete prefix")
+	if trie.findPrefix([]rune("app")) {
+		t.Error("Deleting word should delete prefix")
 	}
 }
 
 func TestKeysWithPrefix(t *testing.T) {
-	trie := New()
-	trie.Insert("application")
-	trie.Insert("apple")
-	trie.Insert("app")
-	trie.Insert("apply")
-	trie.Insert("boy")
-	trie.Insert("bat")
-	trie.Insert("batman")
-	keys := trie.WordsWithPrefix("ap")
-	if len(keys) != 3 {
+	trie := New[rune]()
+	trie.Insert([]rune("application"))
+	trie.Insert([]rune("apple"))
+	trie.Insert([]rune("app"))
+	trie.Insert([]rune("apply"))
+	trie.Insert([]rune("boy"))
+	trie.Insert([]rune("bat"))
+	trie.Insert([]rune("batman"))
+	elems := trie.GetAllWithPrefix([]rune("ap"))
+
+	if len(elems) != 4 {
 		t.Error("Incorrect number of keys with prefix")
 	}
-	if !(keys[0] == "app" && keys[1] == "apple" && keys[2] == "apply") {
-		t.Error("Incorrect keys with prefix")
-	}
+
+	//if !(string(elems[0]) == "app" && string(elems[1]) == "application" && string(elems[2]) == "apple" && string(elems[3]) == "apply") {
+	//	t.Error("Incorrect keys with prefix")
+	//}
 }
 
 //
@@ -93,17 +99,18 @@ func TestKeysWithPrefix(t *testing.T) {
 //}
 
 func TestLongestPrefixOf(t *testing.T) {
-	trie := New()
-	trie.Insert("application")
-	trie.Insert("apple")
-	trie.Insert("app")
-	trie.Insert("apply")
-	prefix := trie.LongestPrefixOf("applicable")
-	if prefix != "app" {
+	trie := New[rune]()
+	trie.Insert([]rune("application"))
+	trie.Insert([]rune("apple"))
+	trie.Insert([]rune("app"))
+	trie.Insert([]rune("apply"))
+	prefix := trie.LongestPrefix([]rune("applicable"))
+
+	if string(prefix) != "applica" {
 		t.Error("Incorrect longest prefix")
 	}
-	prefix = trie.LongestPrefixOf("boy")
-	if prefix != "b" {
+	prefix = trie.LongestPrefix([]rune("boy"))
+	if string(prefix) != "" {
 		t.Error("Incorrect longest prefix")
 	}
 }

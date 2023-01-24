@@ -1,143 +1,241 @@
 package trie
 
-type Node struct {
-	children map[rune]*Node
-	last     bool
+type Node[T Elem] struct {
+	children map[T]*Node[T]
+	lastElem bool
 }
 
-type Trie struct {
-	root *Node
+type Trie[T Elem] struct {
+	root *Node[T]
 	size int
 }
 
-func New() *Trie {
-	return &Trie{root: &Node{children: make(map[rune]*Node)}}
+func New[T Elem]() *Trie[T] {
+	return &Trie[T]{root: &Node[T]{children: make(map[T]*Node[T])}}
 }
 
-func (t *Trie) insert(r []rune) {
+func (t *Trie[T]) lazyInit() {
+	if t.root == nil {
+		t.root = &Node[T]{children: make(map[T]*Node[T])}
+	}
+}
+
+func (t *Trie[T]) insert(s []T) {
 	node := t.root
-	for _, c := range r {
+	for _, c := range s {
 		if _, ok := node.children[c]; !ok {
-			node.children[c] = &Node{children: make(map[rune]*Node)}
+			node.children[c] = &Node[T]{children: make(map[T]*Node[T])}
 		}
 		node = node.children[c]
 	}
-	if !node.last {
-		node.last = true
+
+	if !node.lastElem {
+		node.lastElem = true
 		t.size++
 	}
 }
 
-func (t *Trie) get(r []rune) *Node {
-	node := t.root
-	for _, c := range r {
-		if _, ok := node.children[c]; !ok {
-			return nil
-		}
-		node = node.children[c]
-	}
-	return node
+func (t *Trie[T]) findPrefix(s []T) bool {
+	return findPrefix(t.root, s)
 }
 
-func (t *Trie) search(r []rune) bool {
+func findPrefix[T Elem](node *Node[T], s []T) bool {
+	if node == nil {
+		return false
+	}
+
+	if len(s) == 0 {
+		return true
+	}
+
+	if _, ok := node.children[s[0]]; !ok {
+		return false
+	}
+
+	return findPrefix(node.children[s[0]], s[1:])
+}
+
+//func (t *Trie[T]) get(elems []T) *Node[T] {
+//	node := t.root
+//	for _, elem := range elems {
+//		if _, ok := node.children[elem]; !ok {
+//			return nil
+//		}
+//		node = node.children[elem]
+//	}
+//	return node
+//}
+
+func (t *Trie[T]) get(elems []T) bool {
 	node := t.root
-	for _, c := range r {
-		if _, ok := node.children[c]; !ok {
+	for _, elem := range elems {
+		if _, ok := node.children[elem]; !ok {
 			return false
 		}
-		node = node.children[c]
+		node = node.children[elem]
 	}
-	return node.last
+
+	return node.lastElem
 }
 
-func (t *Trie) delete(r []rune) {
+func remove[T Elem](node *Node[T], elems []T) (_ *Node[T], deleted bool) {
+
+	if node == nil {
+		return node, false
+	}
+
+	if len(elems) == 0 && node.lastElem {
+
+		if len(node.children) == 0 {
+			return nil, true
+		}
+		node.lastElem = false
+		return node, true
+	}
+
+	if len(elems) == 0 && !node.lastElem {
+		return node, false
+	}
+
+	child, found := node.children[elems[0]]
+
+	if !found {
+		return node, false
+	}
+
+	node.children[elems[0]], deleted = remove[T](child, elems[1:])
+
+	if node.children[elems[0]] == nil { // child is deleted
+		delete(node.children, elems[0])
+
+		if !node.lastElem && len(node.children) == 0 {
+			return nil, true
+		}
+
+	}
+
+	return node, deleted
+}
+
+func findAllPrefixFrom[T Elem](node *Node[T], elems []T, queue chan<- []T) {
+	if node == nil {
+		return
+	}
+
+	if node.lastElem {
+		queue <- elems
+	}
+
+	for elem, child := range node.children {
+		findAllPrefixFrom[T](child, append(elems, elem), queue)
+	}
+
+}
+
+func (t *Trie[T]) getAllElems() (elems [][]T) {
+	queue := make(chan []T)
+
+	go func() {
+		defer close(queue)
+		findAllPrefixFrom(t.root, []T{}, queue)
+	}()
+
+	for elem := range queue {
+		elems = append(elems, elem)
+	}
+
+	return elems
+}
+
+func (t *Trie[T]) getAllElemsWithPrefix(pre []T) (elems [][]T) {
+
 	node := t.root
-	for _, c := range r {
-		if _, ok := node.children[c]; !ok {
+	for _, e := range pre {
+		if _, ok := node.children[e]; !ok {
 			return
 		}
-		node = node.children[c]
+
+		node = node.children[e]
 	}
-	if node.last {
-		node.last = false
-		t.size--
+
+	queue := make(chan []T)
+
+	go func() {
+		defer close(queue)
+		findAllPrefixFrom(node, pre, queue)
+	}()
+
+	for elem := range queue {
+		elems = append(elems, elem)
 	}
+
+	return elems
+
 }
 
-func (t *Trie) allWordsFrom(node *Node, prefix string) []string {
-	var words []string
-	if node.last {
-		words = append(words, prefix)
-	}
-	for c, n := range node.children {
-		words = append(words, t.allWordsFrom(n, prefix+string(c))...)
-	}
-	return words
-}
-
-func (t *Trie) allWords() []string {
-	return t.allWordsFrom(t.root, "")
-}
-
-func (t *Trie) contains(s string) bool {
+func (t *Trie[T]) longestPrefix(elems []T) (prefix []T) {
 	node := t.root
-	for _, c := range []rune(s) {
-		if _, ok := node.children[c]; !ok {
-			return false
+	for _, elem := range elems {
+		if _, ok := node.children[elem]; !ok {
+			break
 		}
-		node = node.children[c]
+		prefix = append(prefix, elem)
+		node = node.children[elem]
 	}
-	return node.last
-}
 
-func wordsWithPrefix(node *Node, prefix string) []string {
-	var words []string
-	if node.last {
-		words = append(words, prefix)
-	}
-	for c, n := range node.children {
-		words = append(words, wordsWithPrefix(n, prefix+string(c))...)
-	}
-	return words
-}
-
-func (t *Trie) longestPrefixOf(s string) string {
-	node := t.root
-	var prefix string
-	for _, c := range []rune(s) {
-		if _, ok := node.children[c]; !ok {
-			return prefix
-		}
-		prefix += string(c)
-		node = node.children[c]
-	}
 	return prefix
 }
 
-func (t *Trie) Insert(s string) {
-	t.insert([]rune(s))
+//func longestCommonPrefix[T Elem](a, b []T) (prefix []T) {
+//	for i := 0; i < len(a) && i < len(b); i++ {
+//		if a[i] != b[i] {
+//			break
+//		}
+//		prefix = append(prefix, a[i])
+//	}
+//	return prefix
+//}
+
+func (t *Trie[T]) ElemCount() int {
+	return t.size
 }
 
-func (t *Trie) Search(s string) bool {
-	return t.search([]rune(s))
+func (t *Trie[T]) Insert(elems []T) {
+
+	if len(elems) == 0 {
+		return
+	}
+	t.insert(elems)
 }
 
-func (t *Trie) Delete(s string) {
-	t.delete([]rune(s))
+func (t *Trie[T]) Get(elems []T) bool {
+	if len(elems) == 0 {
+		return false
+	}
+	return t.get(elems)
 }
 
-func (t *Trie) WordsWithPrefix(s string) []string {
-	return wordsWithPrefix(t.get([]rune(s)), s)
+func (t *Trie[T]) Delete(elems []T) (deleted bool) {
+	if len(elems) == 0 {
+		return
+	}
+	if _, deleted = remove[T](t.root, elems); deleted {
+		t.size--
+	}
+	return deleted
 }
 
-func (t *Trie) AllWords() []string {
-	return t.allWords()
+func (t *Trie[T]) GetAll() [][]T {
+	t.lazyInit()
+	return t.getAllElems()
 }
 
-func (t *Trie) Contains(s string) bool {
-	return t.contains(s)
+func (t *Trie[T]) GetAllWithPrefix(pre []T) [][]T {
+	t.lazyInit()
+	return t.getAllElemsWithPrefix(pre)
 }
 
-func (t *Trie) LongestPrefixOf(s string) string {
-	return t.longestPrefixOf(s)
+func (t *Trie[T]) LongestPrefix(elems []T) []T {
+	t.lazyInit()
+	return t.longestPrefix(elems)
 }
