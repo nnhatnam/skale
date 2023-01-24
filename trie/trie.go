@@ -225,7 +225,7 @@ func (t *Trie[T]) Delete(elems []T) (deleted bool) {
 	return deleted
 }
 
-func (t *Trie[T]) GetAll() [][]T {
+func (t *Trie[T]) GetAll() [][]T { // TODO: return iterator
 	t.lazyInit()
 	return t.getAllElems()
 }
