@@ -119,3 +119,5 @@ func TestLongestPrefixOf(t *testing.T) {
 		t.Error("Incorrect longest prefix")
 	}
 }
+
+//TODO: More test cases from https://www.aleksandrhovhannisyan.com/blog/trie-data-structure-implementation-in-python/
