@@ -1,9 +1,10 @@
-package trie
+package ternary
 
 import (
-	. "github.com/nnhatnam/skale/list/slice"
 	"strings"
 	"testing"
+
+	. "github.com/nnhatnam/skale/list/slice"
 )
 
 func TestPut(t *testing.T) {
@@ -42,6 +43,7 @@ func TestSearch(t *testing.T) {
 func TestDelete(t *testing.T) {
 	trie := New[rune]()
 	trie.Insert([]rune("apple"))
+
 	trie.Insert([]rune("application"))
 	trie.Delete([]rune("apple"))
 
@@ -61,8 +63,9 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func TestKeysWithPrefix(t *testing.T) {
+func TestValuesWithPrefix(t *testing.T) {
 	trie := New[rune]()
+
 	trie.Insert([]rune("application"))
 	trie.Insert([]rune("apple"))
 	trie.Insert([]rune("app"))
@@ -70,7 +73,7 @@ func TestKeysWithPrefix(t *testing.T) {
 	trie.Insert([]rune("boy"))
 	trie.Insert([]rune("bat"))
 	trie.Insert([]rune("batman"))
-	elems := trie.GetAllWithPrefix([]rune("ap"))
+	elems := trie.ValuesWithPrefix([]rune("ap"))
 
 	if len(elems) != 4 {
 		t.Error("Incorrect number of keys with prefix")
@@ -85,7 +88,6 @@ func TestKeysWithPrefix(t *testing.T) {
 	}
 }
 
-//
 //func TestKeysThatMatch(t *testing.T) {
 //	trie := New()
 //	trie.Insert("application")
@@ -110,12 +112,13 @@ func TestLongestPrefixOf(t *testing.T) {
 	trie.Insert([]rune("apple"))
 	trie.Insert([]rune("app"))
 	trie.Insert([]rune("apply"))
-	prefix := trie.LongestPrefix([]rune("applicable"))
+	prefix := trie.LongestPrefixOf([]rune("applicable"))
 
 	if string(prefix) != "applica" {
 		t.Error("Incorrect longest prefix")
 	}
-	prefix = trie.LongestPrefix([]rune("boy"))
+	prefix = trie.LongestPrefixOf([]rune("boy"))
+
 	if string(prefix) != "" {
 		t.Error("Incorrect longest prefix")
 	}
@@ -144,12 +147,11 @@ func TestLongestPrefixOf(t *testing.T) {
 	}
 
 	for query, result := range longestPrefixTable {
-		longestPrefix := IPTrie.LongestPrefix(strings.Split(query, "."))
+		longestPrefix := IPTrie.LongestPrefixOf(strings.Split(query, "."))
 		if strings.Join(longestPrefix, ".") != result {
 			t.Errorf("Incorrect longest prefix. Expected %s, got %s", result, strings.Join(longestPrefix, "."))
 		}
 
 	}
-}
 
-//TODO: More test cases from https://www.aleksandrhovhannisyan.com/blog/trie-data-structure-implementation-in-python/
+}
