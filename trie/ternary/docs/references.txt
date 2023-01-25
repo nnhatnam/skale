@@ -1,0 +1,2 @@
+https://algs4.cs.princeton.edu/lectures/keynote/52Tries.pdf
+https://www.cs.umd.edu/class/fall2020/cmsc420-0201/Lects/lect19-trie.pdf
