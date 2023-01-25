@@ -1,2 +1,2 @@
 # skale
-Go data structures
+Go data structures (under development). Can't be used in production yet.
