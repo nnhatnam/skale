@@ -96,9 +96,10 @@ func (s Slice[T]) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func (s Slice[T]) Sort(less func(i, j int) bool) {
-	sort.Slice(s, less)
-}
+//
+//func (s Slice[T]) Sort(less func(i, j int) bool) {
+//	sort.Slice(s, less)
+//}
 
 func (s Slice[T]) SortBy(less skale.LessFunc[T]) {
 	sort.Slice(s, func(i, j int) bool {
