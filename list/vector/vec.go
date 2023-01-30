@@ -6,6 +6,9 @@ var (
 	ErrIndexOutOfRange   = errors.New("index out of range")
 	ErrIndexReachMaxSize = errors.New("index reach max size")
 	MaxArraySize         = 1<<31 - 1
+	//
+	//maxUint = ^uint(0)
+	//maxInt  = int(maxUint >> 1)
 )
 
 // GrowFUnc will be call when the capacity is not enough. minCapacity is the min capacity that the vector need.
