@@ -1,9 +1,10 @@
 package trie
 
 import (
-	. "github.com/nnhatnam/skale/list/slice"
 	"strings"
 	"testing"
+
+	"golang.org/x/exp/slices"
 )
 
 func TestPut(t *testing.T) {
@@ -76,7 +77,7 @@ func TestKeysWithPrefix(t *testing.T) {
 		t.Error("Incorrect number of keys with prefix")
 	}
 
-	Slice[[]rune](elems).SortBy(func(a, b []rune) bool {
+	slices.SortFunc(elems, func(a, b []rune) bool {
 		return string(a) < string(b)
 	})
 
