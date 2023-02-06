@@ -8,6 +8,8 @@ type state struct {
 
 type dArray struct {
 	states []state
+
+	biggestIdx int
 }
 
 func newDArray(size int) *dArray {
@@ -20,6 +22,9 @@ func (da *dArray) base(s int) int {
 
 func (da *dArray) setBase(s int, b int) {
 	da.states[s].base = b
+	if s > da.biggestIdx {
+		da.biggestIdx = s
+	}
 }
 
 func (da *dArray) check(t int) int {
@@ -28,6 +33,9 @@ func (da *dArray) check(t int) int {
 
 func (da *dArray) setCheck(t int, s int) {
 	da.states[t].check = s
+	if t > da.biggestIdx {
+		da.biggestIdx = t
+	}
 }
 
 func (da *dArray) prevState(t int) int {
@@ -61,4 +69,27 @@ func (da *dArray) registerNextState(s int, c int) (t int, success bool) {
 		return t, true
 	}
 	return t, false
+}
+
+// copyState copies the state s to t
+func (da *dArray) copyState(t int, s int) {
+	// (s) --c--> (t)
+	da.setCheck(t, da.check(s))
+	da.setBase(t, da.base(s))
+}
+
+// copyState move the state s to t. Update its children's check value
+func (da *dArray) moveState(t int, s int) {
+	// (s) --c--> (t)
+	da.setCheck(t, da.check(s))
+	da.setBase(t, da.base(s))
+
+	for i := 0; i < len(da.states); i++ {
+		if da.check(i) == s {
+			da.setCheck(i, t)
+		}
+	}
+
+	da.setBase(s, 0)
+	da.setCheck(s, 0)
 }

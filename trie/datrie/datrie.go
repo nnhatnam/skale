@@ -1,6 +1,7 @@
 package mptrie
 
 import (
+	"github.com/nnhatnam/skale/exp/xslices"
 	"github.com/nnhatnam/skale/trie"
 	"golang.org/x/exp/slices"
 )
@@ -52,23 +53,6 @@ func (dat *DATrie[T]) insertTail(pos int, l []T) (success bool) {
 
 }
 
-func longestPrefixIndex[T trie.Elem](s1, s2 []T) (_ int) {
-	if len(s1) > len(s2) {
-		s1, s2 = s2, s1
-	}
-
-	if len(s1) == 0 || s1[0] != s2[0] {
-		return -1
-	}
-
-	for i, v := range s1 {
-		if v != s2[i] {
-			return i //collision
-		}
-	}
-	return len(s1) - 1
-}
-
 func (dat *DATrie[T]) term(pos int) int {
 	return slices.Index(dat.tail[pos:], dat.alphaMap.StopElement())
 }
@@ -97,12 +81,25 @@ func (dat *DATrie[T]) xCheck(codes ...T) int {
 	return q
 }
 
+func (dat *DATrie[T]) findAllArcsLeaving(s int) []T {
+
+	var children []T
+
+	for i := 1; i <= dat.biggestIdx; i++ {
+		if dat.check(i) == s {
+			children = append(children, dat.alphaMap.Get(i-dat.base(s)))
+		}
+	}
+	return children
+}
+
 func (dat *DATrie[T]) insert(value []T) {
 	//TODO: make sure enough space
 	s := 1 //start from root (state 1)
 	for idx := 1; idx < len(value); idx++ {
 		c := dat.alphaMap.Code(value[idx])
-		if t, success := dat.registerNextState(s, c); success {
+		t, success := dat.registerNextState(s, c)
+		if success {
 
 			// if the next state is successfully registered, check the base
 			// if base value is 0, then set it to -pos and add the tail
@@ -118,7 +115,7 @@ func (dat *DATrie[T]) insert(value []T) {
 				temp := -dat.base(t)
 				leaf := dat.tail[temp:dat.term(temp)]
 
-				offset := longestPrefixIndex(leaf, value[idx:])
+				offset := xslices.LongestPrefixIndex(leaf, value[idx:])
 				if offset == len(leaf)-1 && len(leaf) == len(value[idx:]) {
 					//leaf == value[idx:]
 					//the leaf is the same as the new value, do nothing
@@ -154,7 +151,52 @@ func (dat *DATrie[T]) insert(value []T) {
 			s = t
 			continue
 		} else {
-			//collision
+			//collision occurs. s or t's parent must be moved
+
+			//s--c-->t (t is not available)
+			//find all arcs leaving s
+			sArcs := dat.findAllArcsLeaving(s)
+
+			//find all arcs leaving t's parent
+			tPArcs := dat.findAllArcsLeaving(dat.check(t))
+
+			//we move what ever has fewer branches
+			if len(sArcs)+1 < len(tPArcs) {
+
+				sOldBase := dat.base(s)
+				q := dat.xCheck(sArcs...)
+				dat.setBase(s, q)
+
+				//move all arcs leaving s to the new base
+				for _, arc := range sArcs {
+					oldNode := sOldBase + dat.alphaMap.Code(arc)
+					newNode := dat.base(s) + dat.alphaMap.Code(arc)
+					dat.moveState(newNode, oldNode)
+				}
+
+			} else {
+				parentNode := dat.check(t)
+				parentOldBase := dat.base(parentNode)
+
+				q := dat.xCheck(tPArcs...)
+				dat.setBase(parentNode, q)
+
+				//move all arcs leaving t's parent to the new base
+				for _, arc := range tPArcs {
+					oldNode := parentOldBase + dat.alphaMap.Code(arc)
+					newNode := dat.base(parentNode) + dat.alphaMap.Code(arc)
+					dat.moveState(newNode, oldNode)
+				}
+
+			}
+
+			//re-register the new value
+			t, _ = dat.registerNextState(s, c)
+			dat.setBase(t, -dat.pos)
+			dat.insertTail(dat.pos, value[idx:])
+			dat.pos += len(value[idx:]) + 1
+			break
+
 		}
 
 	}

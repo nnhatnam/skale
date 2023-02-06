@@ -6,6 +6,7 @@ type ArcLabels[T trie.Elem] interface {
 	Code(s T) int
 	Get(i int) T
 	StopElement() T
+	Size() int
 }
 
 type defaultArc[T trie.Elem] []T
@@ -25,6 +26,10 @@ func (d defaultArc[T]) Get(i int) T {
 
 func (d defaultArc[T]) StopElement() T {
 	return d[0]
+}
+
+func (d defaultArc[T]) Size() int {
+	return len(d) - 1 //exclude the stop element
 }
 
 var (
