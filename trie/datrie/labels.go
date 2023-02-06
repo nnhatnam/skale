@@ -1,4 +1,4 @@
-package datrie
+package mptrie
 
 import "github.com/nnhatnam/skale/trie"
 
