@@ -18,3 +18,11 @@ func LongestPrefixIndex[T comparable](s1, s2 []T) (_ int) {
 	}
 	return len(s1) - 1
 }
+
+// Reset modifies the slice s by setting all elements to zero value of type T from index i to j.
+func Reset[T any](s []T, i, j int) {
+	var zero T
+	for k := i; k < j; k++ {
+		s[k] = zero
+	}
+}

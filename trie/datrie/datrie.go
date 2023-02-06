@@ -93,6 +93,35 @@ func (dat *DATrie[T]) findAllArcsLeaving(s int) []T {
 	return children
 }
 
+func (dat *DATrie[T]) lookup(value []T) bool {
+	s := 1 //start from root (state 1)
+	for idx := 1; idx < len(value); idx++ {
+		c := dat.alphaMap.Code(value[idx])
+		t := dat.nextState(s, c)
+		if dat.check(t) != s {
+			return false
+		}
+
+		if dat.base(t) < 0 {
+			//if base is negative, then it is a leaf
+			//we need to check the tail
+			pos := -dat.base(t)
+			term := dat.term(pos)
+			if term == 0 {
+				return false
+			}
+
+			leaf := dat.tail[pos:term]
+			if !slices.Equal(leaf, value[idx:]) {
+				return false
+			}
+			break
+		}
+		s = t
+	}
+	return true
+}
+
 func (dat *DATrie[T]) insert(value []T) {
 	//TODO: make sure enough space
 	s := 1 //start from root (state 1)
@@ -200,4 +229,38 @@ func (dat *DATrie[T]) insert(value []T) {
 		}
 
 	}
+}
+
+func (dat *DATrie[T]) delete(value []T) bool {
+	s := 1 //start from root (state 1)
+	for idx := 1; idx < len(value); idx++ {
+		c := dat.alphaMap.Code(value[idx])
+		t := dat.nextState(s, c)
+
+		if dat.base(t) < 0 {
+			//if base is negative, then it is a leaf
+			//we need to check the tail
+			pos := -dat.base(t)
+			term := dat.term(pos)
+			if term == 0 {
+				return false
+			}
+
+			leaf := dat.tail[pos:term]
+			if !slices.Equal(leaf, value[idx:]) {
+				return false
+			} else {
+				//delete the leaf
+				xslices.Reset(dat.tail, pos, term)
+				if term == dat.pos {
+					dat.pos = pos - 1
+				}
+				dat.setBase(t, 0)
+				dat.setCheck(t, 0)
+			}
+			break
+		}
+		s = t
+	}
+	return true
 }
