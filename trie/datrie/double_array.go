@@ -1,4 +1,4 @@
-package mptrie
+package datrie
 
 // double array item
 type state struct {

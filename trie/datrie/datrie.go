@@ -1,4 +1,6 @@
-package mptrie
+// Package datrie implements a double-array trie based on the algorithm described in the paper:
+// An Efficient Implementation of Trie Structures (https://doi.org/10.1002/spe.4380220902)
+package datrie
 
 import (
 	"github.com/nnhatnam/skale/exp/xslices"
@@ -12,37 +14,20 @@ type DATrie[T trie.Elem] struct {
 
 	pos int //current position in tail
 
-	alphaMap ArcLabels[T] //a collection of valid arc labels, and their corresponding codes.
+	alphaMap ArcDomain[T] //a collection of valid arc labels, and their corresponding codes.
 
 }
 
-func NewDATrie[T trie.Elem]() *DATrie[T] {
+func New[T trie.Elem](arcMap ArcDomain[T]) *DATrie[T] {
 	t := &DATrie[T]{}
 	t.dArray = newDArray(1000)
 
 	t.tail = make([]T, 1000)
 	t.pos = 1
+
+	t.alphaMap = arcMap
 	return t
 }
-
-//func (da *DATrie[T]) prevState(t int) int {
-//	return da.states[t].check
-//}
-
-// getNextState find the next state of state s with input c.
-// if the new state is available, it registers the state in the check array and returns the new state
-// if the new state is not available, it returns the state and false
-//func (da *DATrie[T]) registerNextState(s int, c T) (t int, success bool) {
-//	// (s) --c--> (t)
-//	t = da.states[s].base + da.alphaMap.Code(c)
-//	if da.states[t].check == 0 {
-//		da.states[t].check = s
-//		return t, true
-//	} else if da.states[t].check == s {
-//		return t, true
-//	}
-//	return t, false
-//}
 
 // insertTail inserts a slice of elements to the tail of the trie in the position pos, then updates the pos accordingly.
 func (dat *DATrie[T]) insertTail(pos int, l []T) (success bool) {
@@ -263,4 +248,8 @@ func (dat *DATrie[T]) delete(value []T) bool {
 		s = t
 	}
 	return true
+}
+
+func (dat *DATrie[T]) Insert(value []T) {
+	dat.insert(value)
 }
