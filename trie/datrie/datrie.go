@@ -16,6 +16,8 @@ type DATrie[T trie.Elem] struct {
 
 	alphaMap ArcDomain[T] //a collection of valid arc labels, and their corresponding codes.
 
+	size int //number of words in the trie
+
 }
 
 func New[T trie.Elem](arcMap ArcDomain[T]) *DATrie[T] {
@@ -185,7 +187,7 @@ func (dat *DATrie[T]) insert(value []T) {
 				for _, arc := range sArcs {
 					oldNode := sOldBase + dat.alphaMap.Code(arc)
 					newNode := dat.base(s) + dat.alphaMap.Code(arc)
-					dat.moveState(newNode, oldNode)
+					dat.relocateState(newNode, oldNode)
 				}
 
 			} else {
@@ -199,7 +201,7 @@ func (dat *DATrie[T]) insert(value []T) {
 				for _, arc := range tPArcs {
 					oldNode := parentOldBase + dat.alphaMap.Code(arc)
 					newNode := dat.base(parentNode) + dat.alphaMap.Code(arc)
-					dat.moveState(newNode, oldNode)
+					dat.relocateState(newNode, oldNode)
 				}
 
 			}
@@ -250,6 +252,18 @@ func (dat *DATrie[T]) delete(value []T) bool {
 	return true
 }
 
+func (dat *DATrie[T]) Size() int {
+	return dat.size
+}
+
+func (dat *DATrie[T]) Delete(value []T) bool {
+	return dat.delete(value)
+}
+
 func (dat *DATrie[T]) Insert(value []T) {
 	dat.insert(value)
+}
+
+func (dat *DATrie[T]) Contain(value []T) bool {
+	return dat.lookup(value)
 }
