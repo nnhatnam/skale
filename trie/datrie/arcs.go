@@ -11,8 +11,8 @@ type ArcDomain[T trie.Elem] interface {
 	//It will panic if the label is not valid.
 	Code(s T) int
 
-	//Get converts a code to its corresponding arc label .
-	Get(i int) T
+	//Label converts a code to its corresponding arc label .
+	Label(i int) T
 
 	//StopElement returns a special element of type trie.Elem that indicates the end of a word.
 	//The returned element must not be a valid arc label.
@@ -34,8 +34,8 @@ func (d DefaultArcDomain[T]) Code(s T) int {
 	panic("invalid arc label")
 }
 
-// Get converts a code to its corresponding arc label.
-func (d DefaultArcDomain[T]) Get(i int) T {
+// Label converts a code to its corresponding arc label.
+func (d DefaultArcDomain[T]) Label(i int) T {
 	return d[i]
 }
 

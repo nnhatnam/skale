@@ -26,3 +26,43 @@ func Reset[T any](s []T, i, j int) {
 		s[k] = zero
 	}
 }
+
+// Insert inserts the values v... into s at index i,
+// returning the modified slice.
+// In the returned slice r, r[i] == v[0].
+// Insert panics if i is out of range.
+// This function is O(len(s) + len(v)).
+// This is a temporary fix for golang.org/x/exp/slices#Insert
+// slices.Insert add extra `i` zero-value elements to the end of the slice causing the length to be longer than expected.
+func Insert[S ~[]E, E any](s S, i int, v ...E) S {
+	tot := len(s) + len(v) // 2 + 7 = 9
+	if tot <= cap(s) {
+		s2 := s[:tot]
+		copy(s2[i+len(v):], s[i:])
+		copy(s2[i:], v)
+		return s2
+	}
+	s2 := make(S, len(v)+i) // t
+	copy(s2, s[:i])
+	copy(s2[i:], v)
+	copy(s2[i+len(v):], s[i:])
+	return s2
+}
+
+// Walk walks through the slice s from position i until it finds the value v.
+// If v is found, returns the list of elements from i to the position of v.
+// If v is not found, returns empty slice.
+func Walk[E comparable](s []E, i int, v E) []E {
+	j := -1
+	var vs E
+	for j, vs = range s {
+		if v == vs {
+			break
+		}
+	}
+	if j != -1 {
+		return s[i:j]
+	}
+
+	return []E{}
+}

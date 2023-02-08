@@ -1,4 +1,4 @@
-// Package datrie implements a double-array trie based on the algorithm described in the paper:
+// Package datrie implements a double-array trie inspired by the algorithm described in the paper:
 // An Efficient Implementation of Trie Structures (https://doi.org/10.1002/spe.4380220902)
 package datrie
 
@@ -8,43 +8,53 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type DATrie[T trie.Elem] struct {
-	*dArray
-	tail []T
+// DATrie implements a double-array trie.
+type DATrie[K trie.Elem, V any] struct {
 
-	pos int //current position in tail
+	//dArray is a double-array that stores the trie.
+	*dArray[V]
 
-	alphaMap ArcDomain[T] //a collection of valid arc labels, and their corresponding codes.
+	//tail is used to store non-branching suffixes. (leaf nodes)
+	tail []K
 
-	size int //number of words in the trie
+	//position of the tail
+	pos int
 
+	//a collection of valid arc labels, and their corresponding codes.
+	alphaMap ArcDomain[K]
+
+	//number of words in the trie
+	len int
 }
 
-func New[T trie.Elem](arcMap ArcDomain[T]) *DATrie[T] {
-	t := &DATrie[T]{}
-	t.dArray = newDArray(1000)
+// New returns a new empty trie. The trie will use the given arcMap to map arc labels to their corresponding codes.
+func New[K trie.Elem, V any](arcMap ArcDomain[K]) *DATrie[K, V] {
+	t := &DATrie[K, V]{}
+	t.dArray = newDArray[V](2)
+	t.setBase(1, 1)
 
-	t.tail = make([]T, 1000)
+	t.tail = make([]K, 2)
 	t.pos = 1
 
 	t.alphaMap = arcMap
 	return t
 }
 
-// insertTail inserts a slice of elements to the tail of the trie in the position pos, then updates the pos accordingly.
-func (dat *DATrie[T]) insertTail(pos int, l []T) (success bool) {
+// writeTail inserts a slice of elements to the tail of the trie in the position pos, then updates the pos accordingly.
+func (dat *DATrie[K, V]) writeTail(pos int, l []K) (success bool) {
+	l = append(l, dat.alphaMap.StopElement())
+	dat.tail = xslices.Insert(dat.tail, pos, l...)
 
-	slices.Insert(dat.tail, pos, l...)
-	dat.tail[pos+len(l)+1] = dat.alphaMap.StopElement()
 	return true
 
 }
 
-func (dat *DATrie[T]) term(pos int) int {
-	return slices.Index(dat.tail[pos:], dat.alphaMap.StopElement())
+// readTail returns the slice of elements that ends at the given position in the tail.
+func (dat *DATrie[K, V]) readTail(pos int) []K {
+	return xslices.Walk(dat.tail, pos, dat.alphaMap.StopElement())
 }
 
-func (dat *DATrie[T]) xCheckAt(s int, c T) int {
+func (dat *DATrie[K, V]) xCheckAt(s int, c K) int {
 
 	for dat.nextState(s, dat.alphaMap.Code(c)) > 0 {
 		s++
@@ -54,7 +64,7 @@ func (dat *DATrie[T]) xCheckAt(s int, c T) int {
 
 }
 
-func (dat *DATrie[T]) xCheck(codes ...T) int {
+func (dat *DATrie[K, V]) xCheck(codes ...K) int {
 
 	q := 1
 
@@ -68,71 +78,96 @@ func (dat *DATrie[T]) xCheck(codes ...T) int {
 	return q
 }
 
-func (dat *DATrie[T]) findAllArcsLeaving(s int) []T {
+func (dat *DATrie[K, V]) findAllArcsLeaving(s int) []K {
 
-	var children []T
+	var children []K
 
-	for i := 1; i <= dat.biggestIdx; i++ {
+	for i := 1; i <= len(dat.states); i++ {
 		if dat.check(i) == s {
-			children = append(children, dat.alphaMap.Get(i-dat.base(s)))
+			children = append(children, dat.alphaMap.Label(i-dat.base(s)))
 		}
 	}
 	return children
 }
 
-func (dat *DATrie[T]) lookup(value []T) bool {
+func (dat *DATrie[K, V]) lookup(key []K) (value V, found bool) {
 	s := 1 //start from root (state 1)
-	for idx := 1; idx < len(value); idx++ {
-		c := dat.alphaMap.Code(value[idx])
+	for idx := 0; idx < len(key); idx++ {
+		c := dat.alphaMap.Code(key[idx])
+
+		if c > len(dat.states) {
+			return value, false
+		}
+
 		t := dat.nextState(s, c)
 		if dat.check(t) != s {
-			return false
+			return value, false
 		}
 
 		if dat.base(t) < 0 {
 			//if base is negative, then it is a leaf
 			//we need to check the tail
+
 			pos := -dat.base(t)
-			term := dat.term(pos)
-			if term == 0 {
-				return false
+
+			if !slices.Equal(dat.readTail(pos), key[idx+1:]) {
+				return value, false
 			}
 
-			leaf := dat.tail[pos:term]
-			if !slices.Equal(leaf, value[idx:]) {
-				return false
-			}
-			break
+			return dat.value(t), true
 		}
 		s = t
 	}
-	return true
+	return dat.value(s), true
 }
 
-func (dat *DATrie[T]) insert(value []T) {
-	//TODO: make sure enough space
+func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
+
 	s := 1 //start from root (state 1)
-	for idx := 1; idx < len(value); idx++ {
-		c := dat.alphaMap.Code(value[idx])
-		t, success := dat.registerNextState(s, c)
+	t := 0
+	for idx := 0; idx < len(key); idx++ {
+		c := dat.alphaMap.Code(key[idx])
+
+		//try to register for the next state
+		t, success = dat.registerNextState(s, c)
+
 		if success {
 
-			// if the next state is successfully registered, check the base
-			// if base value is 0, then set it to -pos and add the tail
+			// if the next state is successfully registered, we need to update the base
+			//since registerNextState only updates the check.
+			// if base value is 0 and the word is not end, then set it to -pos and the remaining part to the tail
 			// if base value is negative, we may consider to split the tail
+			// if base value is 0 and the word is end, we know that it has no children, so we can pick any base value > 0.
+			// in this case, we set it to 1
 			if dat.base(t) == 0 {
-				dat.setBase(t, -dat.pos)
-				dat.insertTail(dat.pos, value[idx:])
-				dat.pos += len(value[idx:]) + 1
+				//Case 1: base = 0
+
+				dat.len++
+
+				if idx == len(key)-1 {
+					//if we are at the end of the key, then we can set the value directly
+					dat.setValue(t, value)
+					dat.setEnd(t, true)
+					dat.setBase(t, 1)
+					return true
+				}
+
+				dat.setBase(t, -dat.pos) //base = -pos
+				dat.setValue(t, value)
+
+				dat.writeTail(dat.pos, key[idx+1:])
+				dat.pos += len(key[idx+1:])
+
 				break
+
 			} else if dat.base(t) < 0 {
 
 				//check if we need to split the tail
 				temp := -dat.base(t)
-				leaf := dat.tail[temp:dat.term(temp)]
+				leaf := dat.readTail(temp)
 
-				offset := xslices.LongestPrefixIndex(leaf, value[idx:])
-				if offset == len(leaf)-1 && len(leaf) == len(value[idx:]) {
+				offset := xslices.LongestPrefixIndex(leaf, key[idx:])
+				if offset == len(leaf)-1 && len(leaf) == len(key[idx:]) {
 					//leaf == value[idx:]
 					//the leaf is the same as the new value, do nothing
 					break
@@ -147,18 +182,18 @@ func (dat *DATrie[T]) insert(value []T) {
 
 					idx = idx + offset
 					//s--leaf[offset+1:]-->t
-					q := dat.xCheck(leaf[offset+1], value[idx+1])
+					q := dat.xCheck(leaf[offset+1], key[idx+1])
 					dat.setBase(t, q)
 
 					//re-register the leaf
 					t, _ = dat.registerNextState(t, dat.alphaMap.Code(leaf[offset+1]))
 					dat.setBase(t, -temp)
-					dat.insertTail(temp, leaf[offset+1:])
+					dat.writeTail(temp, leaf[offset+1:])
 					//re-register the new value
-					t, _ = dat.registerNextState(t, dat.alphaMap.Code(value[idx+1]))
+					t, _ = dat.registerNextState(t, dat.alphaMap.Code(key[idx+1]))
 					dat.setBase(t, -dat.pos)
-					dat.insertTail(dat.pos, value[idx+1:])
-					dat.pos += len(value[idx+1:]) + 1
+					dat.writeTail(dat.pos, key[idx+1:])
+					dat.pos += len(key[idx+1:]) + 1
 					break //done
 				}
 
@@ -209,16 +244,17 @@ func (dat *DATrie[T]) insert(value []T) {
 			//re-register the new value
 			t, _ = dat.registerNextState(s, c)
 			dat.setBase(t, -dat.pos)
-			dat.insertTail(dat.pos, value[idx:])
-			dat.pos += len(value[idx:]) + 1
+			dat.writeTail(dat.pos, key[idx:])
+			dat.pos += len(key[idx:]) + 1
 			break
 
 		}
 
 	}
+	return
 }
 
-func (dat *DATrie[T]) delete(value []T) bool {
+func (dat *DATrie[K, V]) delete(value []K) bool {
 	s := 1 //start from root (state 1)
 	for idx := 1; idx < len(value); idx++ {
 		c := dat.alphaMap.Code(value[idx])
@@ -228,18 +264,14 @@ func (dat *DATrie[T]) delete(value []T) bool {
 			//if base is negative, then it is a leaf
 			//we need to check the tail
 			pos := -dat.base(t)
-			term := dat.term(pos)
-			if term == 0 {
-				return false
-			}
 
-			leaf := dat.tail[pos:term]
+			leaf := dat.readTail(pos)
 			if !slices.Equal(leaf, value[idx:]) {
 				return false
 			} else {
 				//delete the leaf
-				xslices.Reset(dat.tail, pos, term)
-				if term == dat.pos {
+				xslices.Reset(dat.tail, pos, len(leaf))
+				if len(leaf) == dat.pos {
 					dat.pos = pos - 1
 				}
 				dat.setBase(t, 0)
@@ -252,18 +284,23 @@ func (dat *DATrie[T]) delete(value []T) bool {
 	return true
 }
 
-func (dat *DATrie[T]) Size() int {
-	return dat.size
+func (dat *DATrie[K, V]) Len() int {
+	return dat.len
 }
 
-func (dat *DATrie[T]) Delete(value []T) bool {
+func (dat *DATrie[K, V]) Delete(value []K) bool {
 	return dat.delete(value)
 }
 
-func (dat *DATrie[T]) Insert(value []T) {
-	dat.insert(value)
+func (dat *DATrie[K, V]) Insert(key []K, value V) {
+	dat.insertOrReplace(key, value)
 }
 
-func (dat *DATrie[T]) Contain(value []T) bool {
-	return dat.lookup(value)
+func (dat *DATrie[K, V]) Contain(value []K) (found bool) {
+	_, found = dat.lookup(value)
+	return
+}
+
+func (dat *DATrie[K, V]) Get(key []K) (value V, found bool) {
+	return dat.lookup(key)
 }
