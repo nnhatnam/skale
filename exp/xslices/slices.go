@@ -2,22 +2,95 @@
 // This package is just a temporary solution for internal use. It will be removed when golang.org/x/exp/slices provides the same functions.
 package xslices
 
-// LongestPrefixIndex returns the index of the last element in the longest common prefix of s1 and s2.
-func LongestPrefixIndex[T comparable](s1, s2 []T) (_ int) {
-	if len(s1) > len(s2) {
-		s1, s2 = s2, s1
-	}
+type Iterator[T any] func(item T) bool
 
-	//if len(s1) == 0 || s1[0] != s2[0] {
-	//	return -1
-	//}
-
-	for i, v := range s1 {
-		if v != s2[i] {
-			return i - 1 //collision
+// FindNext calls iter on each element in s starting from pivot, and returns the index of the first element for which iter returns true.
+func FindNext[E any](s []E, pivot int, iter Iterator[E]) int {
+	i := pivot
+	for ; i < len(s); i++ {
+		if iter(s[i]) {
+			return i
 		}
 	}
-	return len(s1) - 1
+	return -1
+}
+
+// FindPrev calls iter on each element in s starting from pivot, and returns the index of the first element for which iter returns true.
+func FindPrev[E any](s []E, pivot int, iter Iterator[E]) int {
+	i := pivot - 1
+	for ; i >= 0; i-- {
+		if iter(s[i]) {
+			return i
+		}
+	}
+	return -1
+}
+
+// FindRange calls iter on each element in s[start:end], and returns the index of the first element for which iter returns true.
+func FindRange[E any](s []E, start, end int, iter Iterator[E]) int {
+	i := start
+	for ; i < end; i++ {
+		if iter(s[i]) {
+			return i
+		}
+	}
+	return -1
+}
+
+// [pivot, len(s))
+func IndexGreaterOrEqual[E any](s []E, pivot int, iter Iterator[E]) int {
+	i := pivot
+	for ; i < len(s); i++ {
+		if !iter(s[i]) {
+
+			if i == pivot {
+				return -1
+			}
+			return i
+		}
+	}
+	return i
+}
+
+// [0, pivot)
+func IndexLessThan[E any](s []E, pivot int, iter Iterator[E]) int {
+	i := pivot - 1
+	for ; i >= 0; i-- {
+		if !iter(s[i]) {
+			if i == pivot-1 {
+				return -1
+			}
+			return i
+		}
+	}
+	return i
+}
+
+// [start, end)
+func IndexRange[E any](s []E, start, end int, iter Iterator[E]) int {
+	i := start
+	for ; i < end; i++ {
+		if !iter(s[i]) {
+			if i == start {
+				return -1
+			}
+			return i
+		}
+	}
+	return i
+}
+
+// LongestPrefixIndex returns the index of the last element in the longest common prefix of s1 and s2.
+func LongestPrefixIndex[T comparable](s1, s2 []T) (_ int) {
+
+	var idx int
+	for idx = 0; idx < len(s1) && idx < len(s2); idx++ {
+		if s1[idx] != s2[idx] {
+			return idx - 1
+		}
+	}
+
+	return -1 // no common prefix
 }
 
 // Reset modifies the slice s by setting all elements to zero value of type T from index i to j.

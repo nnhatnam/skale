@@ -31,7 +31,7 @@ type DATrie[K trie.Elem, V any] struct {
 func New[K trie.Elem, V any](arcMap ArcDomain[K]) *DATrie[K, V] {
 	t := &DATrie[K, V]{}
 	t.dArray = newDArray[V](2)
-	t.setBase(1, 1)
+	t.writeBase(1, 1)
 
 	t.tail = make([]K, 1)
 	t.pos = 1 // in most cases, pos = tail. Unless, we remove the last elements in the tail.
@@ -103,6 +103,10 @@ func (dat *DATrie[K, V]) xCheck(codes ...K) int {
 	return q
 }
 
+func (dat *DATrie[K, V]) registerNextState(s int, c K) (int, bool) {
+	return dat.dArray.registerNextState(s, dat.alphaMap.Code(c))
+}
+
 func (dat *DATrie[K, V]) findAllArcsLeaving(s int) []K {
 
 	var children []K
@@ -146,6 +150,78 @@ func (dat *DATrie[K, V]) lookup(key []K) (value V, found bool) {
 	return dat.value(s), true
 }
 
+// This is a sub-task of insertOrReplace. It is used to update the base of `t` after `t` got successfully registered with no collision (base[s] = 0).,
+// and is only called when there is no collision.
+func (dat *DATrie[K, V]) writeBaseNoCollision(t int, key []K, value V) (success bool) {
+
+	dat.len++
+
+	if len(key) > 0 {
+		dat.writeBase(t, -dat.pos)
+		dat.writeTail(dat.pos, key)
+	}
+
+	dat.setEnd(t, true)
+	dat.setValue(t, value)
+
+	if dat.base(t) == 0 {
+		dat.writeBase(t, 1)
+	}
+
+	return false
+}
+
+// This is a sub-task of insertOrReplace. It is used to update the base of `t` after `t` got successfully registered but the base is negative.,
+// and is only called when there is collision.
+func (dat *DATrie[K, V]) writeNegativeBase(t int, key []K, value V) (success bool) {
+	temp := -dat.base(t)
+	leaf := dat.readTail(temp)
+
+	// if the leaf is the same as the key, then we just need to update the value
+	if slices.Equal(leaf, key) {
+		dat.setValue(t, value)
+		return true
+	}
+
+	// if the leaf is not the same as the key, then we need to split the leaf
+	// and insert the new key.
+
+	// first, we need to find the first element that is different between the leaf and the key
+	// we will split the leaf at this element.
+	var idx int
+	for idx = 0; idx < len(leaf) && idx < len(key); idx++ {
+		if leaf[idx] != key[idx] {
+			break
+		}
+	}
+
+	// if the leaf is a prefix of the key, then we need to split the key at the first element that is different on the key.
+	if idx == len(leaf) { //leaf is a prefix of the key
+		for i := 0; i < idx; i++ {
+			q := dat.xCheck(key[i])
+			dat.writeBase(t, q)
+			t, _ = dat.registerNextState(t, key[i])
+		}
+
+		dat.setEnd(t, true)
+		dat.setValue(t, value)
+
+	}
+
+	// if the leaf is a prefix of the key, then we need to split the leaf at the first element that is different.
+	// otherwise, we need to split the leaf at the first element that is different + 1.
+	// this is because we need to make sure that the leaf is a prefix of the key.
+	if len(leaf) < len(key) {
+		idx++
+	}
+
+	// we need to find the first available state to split the leaf
+	// we will use the first available state to split the leaf.
+	// we will use the second available state to insert the new key.
+	s := dat.xCheck(leaf[:idx]...)
+
+}
+
 func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
 
 	s := 1 //start from root (state 1)
@@ -154,17 +230,10 @@ func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
 	//Essentially, in each iteration, we record the next state (t) based on the current state (s).
 	//Most of the operations are focused on ensuring that the new state (t) is accurately recorded, assuming that s has already been properly recorded.
 	for idx := 0; idx < len(key); idx++ {
-		c := dat.alphaMap.Code(key[idx])
+		c := key[idx]
 
 		//try to register for the next state
 		t, success = dat.registerNextState(s, c)
-
-		if idx+1 == len(key) {
-			//if the next state is the last state, we need to update the value of the state
-			dat.setValue(t, value)
-			dat.setEnd(t, true)
-			return true
-		}
 
 		if success {
 
@@ -175,13 +244,7 @@ func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
 			if dat.base(t) == 0 {
 				//Case 1: base[t] = 0
 
-				dat.len++
-
-				dat.setBase(t, -dat.pos) //base = -pos
-				dat.setValue(t, value)
-
-				dat.writeTail(dat.pos, key[idx+1:]) //write the remaining part of key to the tail
-				//dat.pos += len(key[idx+1:]) + 1
+				dat.writeBaseNoCollision(t, key[idx+1:], value)
 
 				break
 
@@ -201,25 +264,25 @@ func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
 
 					for i := 0; i <= offset; i++ {
 						q := dat.xCheck(leaf[i])
-						dat.setBase(t, q)
+						dat.writeBase(t, q)
 
 						//s--leaf[i]-->t
-						t, _ = dat.registerNextState(t, dat.alphaMap.Code(leaf[i]))
+						t, _ = dat.registerNextState(t, leaf[i])
 					}
 
 					idx = idx + offset + 1
 					//s--leaf[offset+1:]-->t
 					q := dat.xCheck(leaf[offset+1], key[idx+1])
-					dat.setBase(t, q)
+					dat.writeBase(t, q)
 
 					//re-register the leaf
-					t1, _ := dat.registerNextState(t, dat.alphaMap.Code(leaf[offset+1]))
-					dat.setBase(t1, -temp)
+					t1, _ := dat.registerNextState(t, leaf[offset+1])
+					dat.writeBase(t1, -temp)
 					dat.writeTail(temp, leaf[offset+2:])
 
 					//re-register the new value
-					t2, _ := dat.registerNextState(t, dat.alphaMap.Code(key[idx+1]))
-					dat.setBase(t2, -dat.pos)
+					t2, _ := dat.registerNextState(t, key[idx+1])
+					dat.writeBase(t2, -dat.pos)
 					dat.writeTail(dat.pos, key[idx+2:])
 					//dat.pos += len(key[idx+1:]) + 1
 					break //done
@@ -244,7 +307,7 @@ func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
 
 				sOldBase := dat.base(s)
 				q := dat.xCheck(sArcs...)
-				dat.setBase(s, q)
+				dat.writeBase(s, q)
 
 				//move all arcs leaving s to the new base
 				for _, arc := range sArcs {
@@ -258,7 +321,7 @@ func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
 				parentOldBase := dat.base(parentNode)
 
 				q := dat.xCheck(tPArcs...)
-				dat.setBase(parentNode, q)
+				dat.writeBase(parentNode, q)
 
 				//move all arcs leaving t's parent to the new base
 				for _, arc := range tPArcs {
@@ -271,7 +334,7 @@ func (dat *DATrie[K, V]) insertOrReplace(key []K, value V) (success bool) {
 
 			//re-register the new value
 			t, _ = dat.registerNextState(s, c)
-			dat.setBase(t, -dat.pos)
+			dat.writeBase(t, -dat.pos)
 			dat.writeTail(dat.pos, key[idx:])
 			dat.pos += len(key[idx:]) + 1
 			break
@@ -302,8 +365,8 @@ func (dat *DATrie[K, V]) delete(value []K) bool {
 				if len(leaf) == dat.pos {
 					dat.pos = pos - 1
 				}
-				dat.setBase(t, 0)
-				dat.setCheck(t, 0)
+				dat.writeBase(t, 0)
+				dat.writeCheck(t, 0)
 			}
 			break
 		}

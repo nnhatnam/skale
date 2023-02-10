@@ -31,6 +31,10 @@ type dArray[T any] struct {
 	//The index of the array is the state number of the node, and the value of the array is the node itself.
 	//To keep it simple, instead of saying a node with state number `s`, we will just say node `s` (or just simply `s`).
 	states []state[T]
+
+	emptyEnd int // the state number of the empty end node
+
+	emptyStart int // the state number of the empty start node
 }
 
 // newDArray creates a new double array trie data structure with the given size
@@ -56,14 +60,38 @@ func (da *dArray[T]) _check() []int {
 	return checkArr
 }
 
+func (da *dArray[T]) setEmptyLink(i int) {
+
+	var start, end int
+	if i > da.emptyEnd {
+		start, end = da.emptyEnd, i-1
+
+		rn := len(da.states)
+
+		for start < end {
+			if da.check(end) <= 0 {
+				da.writeCheck(end, rn)
+				rn = -end
+
+				if end > da.emptyEnd {
+					da.emptyEnd = end
+				}
+			}
+
+			end--
+		}
+
+	}
+}
+
 // base returns the base value of the node with the given state number
 func (da *dArray[T]) base(s int) int {
 	return da.states[s].base
 }
 
-// setBase sets the base value of the node s to b
+// writeBase sets the base value of the node s to b
 // If s > biggestIdx, then the biggestIdx is updated to s
-func (da *dArray[T]) setBase(s int, b int) {
+func (da *dArray[T]) writeBase(s int, b int) {
 
 	if s >= len(da.states) {
 		da.states = append(da.states, make([]state[T], s-len(da.states)+1)...)
@@ -78,16 +106,71 @@ func (da *dArray[T]) check(t int) int {
 	return da.states[t].check
 }
 
-// setCheck sets the check value of the node t to the given value s
+// writeCheck sets the check value of the node t to the given value s
 // If the given state number is greater than the biggestIdx, then the biggestIdx is updated to the given state number
 // It can also be thought of as setting node s as the parent of the node t (s -> t)
-func (da *dArray[T]) setCheck(t int, s int) {
+func (da *dArray[T]) writeCheck(t int, s int) {
 
 	if t >= len(da.states) {
 		da.states = append(da.states, make([]state[T], t-len(da.states)+1)...)
+		da.setEmptyLink(s)
 	}
 
-	da.states[t].check = s //check[t] = s
+	if s > 0 {
+		//index is in the empty-linkage
+
+		if da.check(t) < 0 {
+
+			l, r := da.emptyStart, da.emptyStart
+
+			for r != t {
+				l = r
+				r = -da.check(r)
+			}
+
+			if t == da.emptyStart {
+				//index is the first index in the empty-linkage
+
+				if da.emptyStart == da.emptyEnd {
+					da.emptyEnd = -da.check(t) // No more empty-linked, move emptyEnd out of the check array
+				}
+				da.emptyStart = -da.check(t) // Move emptyStart to the next empty-linked
+			} else {
+				//index is not the first index in the empty-linkage (middle or end)
+
+				da.states[l].check = -da.check(t) // Set the previous empty-linked to point to the next empty-linked
+
+				if t == da.emptyEnd {
+					da.emptyEnd = l //index is the last index in the empty-linkage, move emptyEnd to the previous empty-linked
+				}
+
+			}
+
+		}
+
+		da.states[t].check = s //check[t] = s
+
+	} else if s == 0 {
+		//left, right or (prev, next) empty-linked
+		l, r := da.emptyStart, da.emptyStart
+
+		for r < t {
+			l = r
+			r = -da.check(r)
+		}
+
+		da.states[l].check = -t
+		da.states[t].check = -r
+
+		if t == l {
+			da.emptyStart = t
+		}
+
+		if t == r {
+			da.states[t].check = -len(da.states)
+			da.emptyEnd = t
+		}
+	}
 
 }
 
@@ -140,7 +223,7 @@ func (da *dArray[T]) registerNextState(s int, c int) (t int, success bool) {
 
 	if da.check(t) == 0 {
 		// t is not registered yet
-		da.setCheck(t, s)
+		da.writeCheck(t, s)
 		return t, true
 	} else if da.check(t) == s {
 		// t is already registered by s
@@ -155,19 +238,19 @@ func (da *dArray[T]) registerNextState(s int, c int) (t int, success bool) {
 func (da *dArray[T]) relocateState(t int, s int) {
 
 	//copy base and check from s to t
-	da.setCheck(t, da.check(s)) //check[t] = check[s]
-	da.setBase(t, da.base(s))   //base[t] = base[s]
-	da.setEnd(t, da.isEnd(s))   //end[t] = end[s]
+	da.writeCheck(t, da.check(s)) //check[t] = check[s]
+	da.writeBase(t, da.base(s))   //base[t] = base[s]
+	da.setEnd(t, da.isEnd(s))     //end[t] = end[s]
 
 	//update children's check value to point to t
 	for i := 0; i < len(da.states); i++ {
 		if da.check(i) == s {
-			da.setCheck(i, t)
+			da.writeCheck(i, t)
 		}
 	}
 
 	//reset node s
-	da.setBase(s, 0)
-	da.setCheck(s, 0)
+	da.writeBase(s, 0)
+	da.writeCheck(s, 0)
 	da.setEnd(s, false)
 }
