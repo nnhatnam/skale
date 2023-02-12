@@ -218,7 +218,9 @@ func (dat *DATrie[K, V]) writeNegativeBase(t int, key []K, value V) (success boo
 	// we need to find the first available state to split the leaf
 	// we will use the first available state to split the leaf.
 	// we will use the second available state to insert the new key.
-	s := dat.xCheck(leaf[:idx]...)
+	//s := dat.xCheck(leaf[:idx]...)
+	
+	return false
 
 }
 
