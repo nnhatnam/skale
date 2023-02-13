@@ -37,6 +37,20 @@ func (l *List[T]) insertValue(v T, mark *Node[T]) *Node[T] {
 	return l.insert(NewNode(v), mark)
 }
 
+// move moves e to next to at.
+func (l *List[T]) move(e, at *Node[T]) {
+	if e == at {
+		return
+	}
+	e.prev.next = e.next
+	e.next.prev = e.prev
+
+	e.prev = at
+	e.next = at.next
+	e.prev.next = e
+	e.next.prev = e
+}
+
 func (l *List[T]) remove(n *Node[T]) *Node[T] {
 
 	//node before n is now before n.next
@@ -44,6 +58,8 @@ func (l *List[T]) remove(n *Node[T]) *Node[T] {
 
 	//node after n is now after n.prev
 	n.next.prev = n.prev
+	n.next = nil // avoid memory leaks
+	n.prev = nil // avoid memory leaks
 	l.len--
 	return n
 }
@@ -77,12 +93,12 @@ func (l *List[T]) back() *Node[T] {
 	return l.root.prev
 }
 
-// First returns the first value in the linkedlist
+// Front returns the first value in the linkedlist
 func (l *List[T]) Front() T {
 	return l.front().Value
 }
 
-// Last returns the last value in the linkedlist
+// Back returns the last value in the linkedlist
 func (l *List[T]) Back() T {
 
 	return l.back().Value
@@ -116,37 +132,44 @@ func (l *List[T]) PopBack() (T, bool) {
 	return n.Value, true
 }
 
-//
-//func (l *List) Begin() *Cursor {
-//	return &Cursor{list: l, current: l.root.next}
-//}
-//
-//func (l *List) End() *Cursor {
-//	return &Cursor{list: l, current: l.root.prev}
-//}
-//
-//func (l *List) Traverse(f IterFunc) {
-//	for n := l.first(); n != l.last(); n = n.next {
-//		f(n.Value)
-//	}
-//}
-//
-//func (l *List) RTraverse(f IterFunc) {
-//	for n := l.last(); n != l.first(); n = n.prev {
-//		f(n.Value)
-//	}
-//}
-//
-//func (l *List) TraverseWithIndex(f IterFuncWithIndex) {
-//	i := 0
-//	for n := l.first(); n != l.last(); n, i = n.next, i+1 {
-//		f(i, n.Value)
-//	}
-//}
-//
-//func (l *List) RTraverseWithIndex(f IterFuncWithIndex) {
-//	i := l.length - 1
-//	for n := l.first(); n != l.last(); n, i = n.next, i-1 {
-//		f(i, n.Value)
-//	}
-//}
+func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *Node[T] {
+	if c.current == &c.list.root || c.list != l {
+		return nil
+	}
+	c.current = c.list.insertValue(v, c.current.prev)
+	return c.current
+}
+
+func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *Node[T] {
+	if c.current == &c.list.root || c.list != l {
+		return nil
+	}
+	c.current = c.list.insertValue(v, c.current)
+	return c.current
+}
+
+func (l *List[T]) RemoveCurrent(c *Cursor[T]) *Node[T] {
+	if c.list != l && c.current == &c.list.root {
+		return nil
+	}
+	n := c.current
+	c.current = c.current.next
+	c.list.remove(n)
+	return n
+}
+
+func (l *List[T]) RemoveAfter(c *Cursor[T]) *Node[T] {
+	if c.list != l || c.current.next == &c.list.root {
+		return nil
+	}
+	return c.list.remove(c.current.next)
+
+}
+
+func (l *List[T]) RemoveBefore(c *Cursor[T]) *Node[T] {
+
+	if c.list != l && c.current.prev == &c.list.root {
+		return nil
+	}
+	return c.list.remove(c.current.prev)
+}
