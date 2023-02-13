@@ -1,82 +1,23 @@
 package linkedlist
 
-// Node is a node in a double linked linkedlist
-type Node struct {
-	next, prev *Node
-
-	Value any
-}
-
-func NewNode(value any) *Node {
-	return &Node{Value: value}
-}
-
-type List struct {
-	root   Node
-	length int
+type List[T any] struct {
+	root Node[T]
+	len  int
 }
 
 type IterFunc func(v any)
 type IterFuncWithIndex func(i int, v any)
 
-func New() *List {
-	l := new(List)
+func New[T any]() *List[T] {
+	l := &List[T]{}
 	l.root.next = &l.root
 	l.root.prev = &l.root
-	l.length = 0
+	l.len = 0
 	return l
-}
-
-func From(values ...any) *List {
-	l := New()
-	for _, v := range values {
-		l.insertValue(v, l.root.prev)
-	}
-	return l
-}
-
-func (l *List) increment() {
-	l.length++
-}
-
-func (l *List) decrement() {
-	l.length--
-}
-
-// Len returns the length of the linkedlist
-func (l *List) Len() int {
-	return l.length
-}
-
-// first returns the first node in the linkedlist
-func (l *List) first() *Node {
-	if l.length == 0 {
-		return nil
-	}
-	return l.root.next
-}
-
-// last returns the last node in the linkedlist
-func (l *List) last() *Node {
-	if l.length == 0 {
-		return nil
-	}
-	return l.root.prev
-}
-
-// First returns the first value in the linkedlist
-func (l *List) First() any {
-	return l.first().Value
-}
-
-// Last returns the last value in the linkedlist
-func (l *List) Last() any {
-
-	return l.last().Value
 }
 
 // insert inserts a node after mark. The mask must not be nil.
-func (l *List) insert(n, at *Node) *Node {
+func (l *List[T]) insert(n, at *Node[T]) *Node[T] {
 
 	//n after at, n before at.next
 	n.prev = at
@@ -87,82 +28,125 @@ func (l *List) insert(n, at *Node) *Node {
 
 	//n before at.next
 	n.next.prev = n
-	l.increment()
+	l.len++
 	return n
 }
 
 // insertValue is a convenience wrapper for insert(&Node{Value: v}, at)
-func (l *List) insertValue(v any, mark *Node) *Node {
+func (l *List[T]) insertValue(v T, mark *Node[T]) *Node[T] {
 	return l.insert(NewNode(v), mark)
 }
 
-func (l *List) remove(n *Node) *Node {
+func (l *List[T]) remove(n *Node[T]) *Node[T] {
 
 	//node before n is now before n.next
 	n.prev.next = n.next
 
 	//node after n is now after n.prev
 	n.next.prev = n.prev
-	l.decrement()
+	l.len--
 	return n
 }
 
-func (l *List) PushBack(v any) {
+func From[T any](values ...T) *List[T] {
+	l := New[T]()
+	for _, v := range values {
+		l.insertValue(v, l.root.prev)
+	}
+	return l
+}
+
+// Len returns the length of the linkedlist
+func (l *List[T]) Len() int {
+	return l.len
+}
+
+// first returns the first node in the linkedlist
+func (l *List[T]) front() *Node[T] {
+	if l.len == 0 {
+		return nil
+	}
+	return l.root.next
+}
+
+// last returns the last node in the linkedlist
+func (l *List[T]) back() *Node[T] {
+	if l.len == 0 {
+		return nil
+	}
+	return l.root.prev
+}
+
+// First returns the first value in the linkedlist
+func (l *List[T]) Front() T {
+	return l.front().Value
+}
+
+// Last returns the last value in the linkedlist
+func (l *List[T]) Back() T {
+
+	return l.back().Value
+}
+
+func (l *List[T]) PushBack(v T) {
 	l.insertValue(v, l.root.prev)
 }
 
-func (l *List) PushFront(v any) {
+func (l *List[T]) PushFront(v T) {
 	l.insertValue(v, &l.root)
 }
 
-func (l *List) PopFront() any {
-	if l.length == 0 {
-		return nil
+func (l *List[T]) PopFront() (T, bool) {
+	var zero T
+	if l.len == 0 {
+		return zero, false
 	}
-	n := l.first()
+	n := l.front()
 	l.remove(n)
-	return n.Value
+	return n.Value, true
 }
 
-func (l *List) PopBack() any {
-	if l.length == 0 {
-		return nil
+func (l *List[T]) PopBack() (T, bool) {
+	var zero T
+	if l.len == 0 {
+		return zero, false
 	}
-	n := l.last()
+	n := l.back()
 	l.remove(n)
-	return n.Value
+	return n.Value, true
 }
 
-func (l *List) Begin() *Cursor {
-	return &Cursor{list: l, current: l.root.next}
-}
-
-func (l *List) End() *Cursor {
-	return &Cursor{list: l, current: l.root.prev}
-}
-
-func (l *List) Traverse(f IterFunc) {
-	for n := l.first(); n != l.last(); n = n.next {
-		f(n.Value)
-	}
-}
-
-func (l *List) RTraverse(f IterFunc) {
-	for n := l.last(); n != l.first(); n = n.prev {
-		f(n.Value)
-	}
-}
-
-func (l *List) TraverseWithIndex(f IterFuncWithIndex) {
-	i := 0
-	for n := l.first(); n != l.last(); n, i = n.next, i+1 {
-		f(i, n.Value)
-	}
-}
-
-func (l *List) RTraverseWithIndex(f IterFuncWithIndex) {
-	i := l.length - 1
-	for n := l.first(); n != l.last(); n, i = n.next, i-1 {
-		f(i, n.Value)
-	}
-}
+//
+//func (l *List) Begin() *Cursor {
+//	return &Cursor{list: l, current: l.root.next}
+//}
+//
+//func (l *List) End() *Cursor {
+//	return &Cursor{list: l, current: l.root.prev}
+//}
+//
+//func (l *List) Traverse(f IterFunc) {
+//	for n := l.first(); n != l.last(); n = n.next {
+//		f(n.Value)
+//	}
+//}
+//
+//func (l *List) RTraverse(f IterFunc) {
+//	for n := l.last(); n != l.first(); n = n.prev {
+//		f(n.Value)
+//	}
+//}
+//
+//func (l *List) TraverseWithIndex(f IterFuncWithIndex) {
+//	i := 0
+//	for n := l.first(); n != l.last(); n, i = n.next, i+1 {
+//		f(i, n.Value)
+//	}
+//}
+//
+//func (l *List) RTraverseWithIndex(f IterFuncWithIndex) {
+//	i := l.length - 1
+//	for n := l.first(); n != l.last(); n, i = n.next, i-1 {
+//		f(i, n.Value)
+//	}
+//}
