@@ -142,7 +142,7 @@ func TestOriginalList(t *testing.T) {
 		t.Errorf("sum over l = %d, want 4", sum)
 	}
 
-	// Clear all Nodes\
+	// Clear all Nodes
 	c = l.Cursor()
 	for l.RemoveAfter(c) != nil {
 	}

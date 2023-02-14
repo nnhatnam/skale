@@ -5,7 +5,8 @@ type List[T any] struct {
 	len  int
 }
 
-type IterFunc func(v any)
+type IterFunc[T any] func(n *Node[T]) bool
+
 type IterFuncWithIndex func(i int, v any)
 
 func New[T any]() *List[T] {
@@ -105,14 +106,18 @@ func (l *List[T]) Back() T {
 }
 
 func (l *List[T]) PushBack(v T) {
+	l.lazyInit()
 	l.insertValue(v, l.root.prev)
 }
 
 func (l *List[T]) PushFront(v T) {
+	l.lazyInit()
 	l.insertValue(v, &l.root)
 }
 
 func (l *List[T]) PopFront() (T, bool) {
+	l.lazyInit()
+
 	var zero T
 	if l.len == 0 {
 		return zero, false
@@ -123,6 +128,8 @@ func (l *List[T]) PopFront() (T, bool) {
 }
 
 func (l *List[T]) PopBack() (T, bool) {
+	l.lazyInit()
+
 	var zero T
 	if l.len == 0 {
 		return zero, false
@@ -133,7 +140,7 @@ func (l *List[T]) PopBack() (T, bool) {
 }
 
 func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *Node[T] {
-	if c.current == &c.list.root || c.list != l {
+	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
 	c.current = c.list.insertValue(v, c.current.prev)
@@ -141,7 +148,7 @@ func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *Node[T] {
 }
 
 func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *Node[T] {
-	if c.current == &c.list.root || c.list != l {
+	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
 	c.current = c.list.insertValue(v, c.current)
@@ -149,7 +156,8 @@ func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *Node[T] {
 }
 
 func (l *List[T]) RemoveCurrent(c *Cursor[T]) *Node[T] {
-	if c.list != l && c.current == &c.list.root {
+
+	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
 	n := c.current
@@ -159,7 +167,7 @@ func (l *List[T]) RemoveCurrent(c *Cursor[T]) *Node[T] {
 }
 
 func (l *List[T]) RemoveAfter(c *Cursor[T]) *Node[T] {
-	if c.list != l || c.current.next == &c.list.root {
+	if c.list != l || l.root.prev == c.current {
 		return nil
 	}
 	return c.list.remove(c.current.next)
@@ -168,8 +176,38 @@ func (l *List[T]) RemoveAfter(c *Cursor[T]) *Node[T] {
 
 func (l *List[T]) RemoveBefore(c *Cursor[T]) *Node[T] {
 
-	if c.list != l && c.current.prev == &c.list.root {
+	if c.list != l || l.root.next == c.current {
 		return nil
 	}
 	return c.list.remove(c.current.prev)
+}
+
+func (l *List[T]) MoveToFront(c *Cursor[T]) {
+	if c.list != l || l.root.next == c.current {
+		return
+	}
+
+	l.move(c.current, &l.root)
+}
+
+func (l *List[T]) MoveToBack(c *Cursor[T]) {
+	if c.list != l || l.root.prev == c.current {
+		return
+	}
+
+	l.move(c.current, l.root.prev)
+}
+
+func (l *List[T]) MoveBefore(c, mark *Cursor[T]) {
+	if c.list != l || c.current == mark.current || mark.list != l {
+		return
+	}
+	l.move(c.current, mark.current.prev)
+}
+
+func (l *List[T]) MoveAfter(c, mark *Cursor[T]) {
+	if c.list != l || c.current == mark.current || mark.list != l {
+		return
+	}
+	l.move(c.current, mark.current)
 }
