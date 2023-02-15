@@ -133,7 +133,7 @@ func TestOriginalList(t *testing.T) {
 	sum := 0
 	c := l.Cursor()
 	for c.MoveNext() != nil {
-		if i, ok := c.Current().Value.(int); ok {
+		if i, ok := c.Node().Value.(int); ok {
 			sum += i
 		}
 	}
@@ -225,28 +225,6 @@ func TestRemove(t *testing.T) {
 
 }
 
-//This issue is not applied to our implementation
-//func TestIssue4103(t *testing.T) {
-//	l1 := New()
-//	l1.PushBack(1)
-//	l1.PushBack(2)
-//
-//	l2 := New()
-//	l2.PushBack(3)
-//	l2.PushBack(4)
-//
-//	e := l1.Front()
-//	l2.Remove(e) // l2 should not change because e is not an Node of l2
-//	if n := l2.Len(); n != 2 {
-//		t.Errorf("l2.Len() = %d, want 2", n)
-//	}
-//
-//	l1.InsertBefore(8, e)
-//	if n := l1.Len(); n != 3 {
-//		t.Errorf("l1.Len() = %d, want 3", n)
-//	}
-//}
-
 func TestIssue6349(t *testing.T) {
 	l := New[int]()
 	l.pushBack(1)
@@ -316,40 +294,3 @@ func TestZeroList(t *testing.T) {
 	l4.pushBackList(l2)
 	checkList(t, l4, []int{1})
 }
-
-// Test that a linkedlist l is not modified when calling InsertBefore with a mark that is not an Node of l.
-//func TestInsertBeforeUnknownMark(t *testing.T) {
-//	var l List[int]
-//	l.PushBack(1)
-//	l.PushBack(2)
-//	l.PushBack(3)
-//	l.InsertBefore(1, new(Node))
-//	checkList(t, &l, []any{1, 2, 3})
-//}
-
-//// Test that a linkedlist l is not modified when calling InsertAfter with a mark that is not an Node of l.
-//func TestInsertAfterUnknownMark(t *testing.T) {
-//	var l List
-//	l.PushBack(1)
-//	l.PushBack(2)
-//	l.PushBack(3)
-//	l.InsertAfter(1, new(Node))
-//	checkList(t, &l, []any{1, 2, 3})
-//}
-//
-//// Test that a linkedlist l is not modified when calling MoveAfter or MoveBefore with a mark that is not an Node of l.
-//func TestMoveUnknownMark(t *testing.T) {
-//	var l1 List
-//	e1 := l1.PushBack(1)
-//
-//	var l2 List
-//	e2 := l2.PushBack(2)
-//
-//	l1.MoveAfter(e1, e2)
-//	checkList(t, &l1, []any{1})
-//	checkList(t, &l2, []any{2})
-//
-//	l1.MoveBefore(e1, e2)
-//	checkList(t, &l1, []any{1})
-//	checkList(t, &l2, []any{2})
-//}

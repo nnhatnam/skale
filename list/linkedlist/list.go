@@ -143,16 +143,14 @@ func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *Node[T] {
 	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
-	c.current = c.list.insertValue(v, c.current.prev)
-	return c.current
+	return c.list.insertValue(v, c.current.prev)
 }
 
 func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *Node[T] {
 	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
-	c.current = c.list.insertValue(v, c.current)
-	return c.current
+	return c.list.insertValue(v, c.current)
 }
 
 func (l *List[T]) RemoveCurrent(c *Cursor[T]) *Node[T] {
@@ -210,4 +208,42 @@ func (l *List[T]) MoveAfter(c, mark *Cursor[T]) {
 		return
 	}
 	l.move(c.current, mark.current)
+}
+
+func (l *List[T]) Traverse(f func(T)) {
+	for n := l.front(); n != nil; n = n.next {
+		f(n.Value)
+	}
+}
+
+func (l *List[T]) PushBackList(other *List[T]) {
+	l.lazyInit()
+
+	back := other.BackCursor().Node()
+
+	other.Cursor().Ascending(func(n *Node[T]) bool {
+
+		l.insertValue(n.Value, l.root.prev)
+		if n == back {
+			return false
+		}
+		return true
+	})
+
+}
+
+func (l *List[T]) PushFrontList(other *List[T]) {
+	l.lazyInit()
+
+	front := other.FrontCursor().Node()
+
+	other.Cursor().Descending(func(n *Node[T]) bool {
+
+		l.insertValue(n.Value, &l.root)
+		if n == front {
+			return false
+		}
+		return true
+	})
+
 }

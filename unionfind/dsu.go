@@ -1,7 +1,7 @@
 package unionfind
 
 type DSU[T comparable] struct {
-	sets map[T]*element[T] // TODO: replace it to a hash[pointer]pointer
+	sets map[T]*element[T] // TODO: replace it to a BIMap
 }
 
 func NewDisjointSet[T comparable]() *DSU[T] {
@@ -9,11 +9,11 @@ func NewDisjointSet[T comparable]() *DSU[T] {
 }
 
 func (ds *DSU[T]) MakeSet(v T) {
-	ds.sets[v] = newElement(&v)
+	ds.sets[v] = newElement(v)
 }
 
 func (ds *DSU[T]) FindSet(v T) T {
-	return *findRep(ds.sets[v]).value
+	return findRep(ds.sets[v]).value
 }
 
 func (ds *DSU[T]) UnionSets(x, y T) {
@@ -24,12 +24,12 @@ type element[T any] struct {
 	parent *element[T]
 	rank   int
 
-	value *T
+	value T
 }
 
 // newElement creates a new element with the given value.
 // An element is a set by itself.
-func newElement[T any](v *T) *element[T] {
+func newElement[T any](v T) *element[T] {
 	e := &element[T]{value: v}
 	e.parent = e
 	return e

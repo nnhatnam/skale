@@ -9,43 +9,43 @@ func (l *List[T]) Cursor() *Cursor[T] {
 	return &Cursor[T]{list: l, current: &l.root}
 }
 
-func (l *List[T]) CursorFront() *Cursor[T] {
+func (l *List[T]) FrontCursor() *Cursor[T] {
 	return &Cursor[T]{list: l, current: l.root.next}
 }
 
-func (l *List[T]) CursorBack() *Cursor[T] {
+func (l *List[T]) BackCursor() *Cursor[T] {
 	return &Cursor[T]{list: l, current: l.root.prev}
 }
 
-func (c *Cursor[T]) Current() *Node[T] {
+func (c *Cursor[T]) NextCursor() *Cursor[T] {
+	
+	return &Cursor[T]{list: c.list, current: c.current.next}
+}
+
+func (c *Cursor[T]) PrevCursor() *Cursor[T] {
+
+	return &Cursor[T]{list: c.list, current: c.current.prev}
+}
+
+func (c *Cursor[T]) Node() *Node[T] {
 	if c.current != &c.list.root {
 		return c.current
 	}
 	return nil
 }
 
-func (c *Cursor[T]) Value() (T, bool) {
-	var zero T
-	if c.current != &c.list.root {
-		return c.current.Value, true
+func (c *Cursor[T]) NextNode() *Node[T] {
+	if c.current.next != &c.list.root {
+		return c.current.next
 	}
-	return zero, false
+	return nil
 }
 
-func (c *Cursor[T]) Next() *Node[T] {
-
-	if c.current.next == &c.list.root {
-		return nil
+func (c *Cursor[T]) PrevNode() *Node[T] {
+	if c.current.prev != &c.list.root {
+		return c.current.prev
 	}
-	return c.current.next
-}
-
-func (c *Cursor[T]) Prev() *Node[T] {
-
-	if c.current.prev == &c.list.root {
-		return nil
-	}
-	return c.current.prev
+	return nil
 }
 
 func (c *Cursor[T]) MoveNext() *Node[T] {
@@ -80,6 +80,48 @@ func (c *Cursor[T]) MoveToBack() bool {
 	}
 	c.current = c.list.root.prev
 	return true
+}
+
+func (c *Cursor[T]) Ascending(iter IterFunc[T]) {
+	if c.list.len > 0 {
+
+		if c.current != &c.list.root {
+			if !iter(c.current) {
+				return
+			}
+		}
+
+		for c.MoveNext() != nil {
+			if !iter(c.current) {
+				return
+			}
+		}
+
+	}
+
+}
+
+func (c *Cursor[T]) Descending(iter IterFunc[T]) {
+	if c.list.len > 0 {
+
+		if c.current != &c.list.root {
+			if !iter(c.current) {
+				return
+			}
+		}
+
+		for c.MovePrev() != nil {
+			if !iter(c.current) {
+				return
+			}
+		}
+
+	}
+
+}
+
+func (c *Cursor[T]) Clone() *Cursor[T] {
+	return &Cursor[T]{list: c.list, current: c.current}
 }
 
 //func (c *Cursor[T]) MoveNext() bool {
