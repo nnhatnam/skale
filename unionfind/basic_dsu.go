@@ -1,10 +1,18 @@
 package unionfind
 
+// Parent represents the interface for obtaining and setting the parent of a given element in BasicDSU.
+// It can be viewed as a mapping between elements and their parents, where the elements and its parent must be the same data type.
 type Parent[T comparable] interface {
+
+	// Get retrieves the parent of the given element v
 	Get(v T) T
-	Set(i, v T)
+
+	// Set sets p as the parent of v
+	Set(v, p T)
 }
 
+// Rank represents the interface for obtaining and setting the rank of a given element in BasicDSU
+// It can be viewed as an upper bound on the height of the tree rooted at the given element.
 type Rank[T comparable] interface {
 	Get(r T) int
 	Set(i T, r int)

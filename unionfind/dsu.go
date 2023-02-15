@@ -1,30 +1,49 @@
 package unionfind
 
-type Element[T any] struct {
-	parent *Element[T]
-	rank   int
-
-	Value T
+type DSU[T comparable] struct {
+	sets map[T]*element[T] // TODO: replace it to a hash[pointer]pointer
 }
 
-func MakeSet[T any](v T) *Element[T] {
-	e := &Element[T]{Value: v}
+func NewDisjointSet[T comparable]() *DSU[T] {
+	return &DSU[T]{sets: make(map[T]*element[T])}
+}
+
+func (ds *DSU[T]) MakeSet(v T) {
+	ds.sets[v] = newElement(&v)
+}
+
+func (ds *DSU[T]) FindSet(v T) T {
+	return *findRep(ds.sets[v]).value
+}
+
+func (ds *DSU[T]) UnionSets(x, y T) {
+	link(findRep(ds.sets[x]), findRep(ds.sets[y]))
+}
+
+type element[T any] struct {
+	parent *element[T]
+	rank   int
+
+	value *T
+}
+
+// newElement creates a new element with the given value.
+// An element is a set by itself.
+func newElement[T any](v *T) *element[T] {
+	e := &element[T]{value: v}
 	e.parent = e
 	return e
 }
 
-func FindSet[T any](e *Element[T]) *Element[T] {
+// findRep returns the representative element of the set containing the given element.
+func findRep[T any](e *element[T]) *element[T] {
 	if e.parent != e {
-		e.parent = FindSet(e.parent)
+		e.parent = findRep(e.parent)
 	}
 	return e.parent
 }
 
-func UnionSets[T any](x, y *Element[T]) {
-	link(FindSet(x), FindSet(y))
-}
-
-func link[T any](x, y *Element[T]) {
+func link[T any](x, y *element[T]) {
 	if x.rank > y.rank {
 		y.parent = x
 	} else {
