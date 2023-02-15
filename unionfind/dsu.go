@@ -20,16 +20,17 @@ func FindSet[T any](e *Element[T]) *Element[T] {
 	return e.parent
 }
 
-func UnionSets[T any](a, b *Element[T]) {
-	a = FindSet(a)
-	b = FindSet(b)
-	if a != b {
-		if a.rank < b.rank {
-			a, b = b, a
-		}
-		b.parent = a
-		if a.rank == b.rank {
-			a.rank++
+func UnionSets[T any](x, y *Element[T]) {
+	link(FindSet(x), FindSet(y))
+}
+
+func link[T any](x, y *Element[T]) {
+	if x.rank > y.rank {
+		y.parent = x
+	} else {
+		x.parent = y
+		if x.rank == y.rank {
+			y.rank++
 		}
 	}
 }
