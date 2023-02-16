@@ -67,7 +67,7 @@ func checkListPointers[T any](t *testing.T, l *List[T], es []*Node[T]) {
 func TestOriginalList(t *testing.T) {
 
 	l := New[any]()
-	//checkListPointers(t, l, []*Node[any]{})
+	checkListPointers(t, l, []*Node[any]{})
 
 	// Single Node linked list
 	e := l.pushFront("a")

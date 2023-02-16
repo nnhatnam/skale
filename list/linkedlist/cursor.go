@@ -5,24 +5,12 @@ type Cursor[T any] struct {
 	current *Node[T]
 }
 
-func (l *List[T]) Cursor() *Cursor[T] {
-	return &Cursor[T]{list: l, current: &l.root}
-}
+func (c *Cursor[T]) CloneNext() *Cursor[T] {
 
-func (l *List[T]) FrontCursor() *Cursor[T] {
-	return &Cursor[T]{list: l, current: l.root.next}
-}
-
-func (l *List[T]) BackCursor() *Cursor[T] {
-	return &Cursor[T]{list: l, current: l.root.prev}
-}
-
-func (c *Cursor[T]) NextCursor() *Cursor[T] {
-	
 	return &Cursor[T]{list: c.list, current: c.current.next}
 }
 
-func (c *Cursor[T]) PrevCursor() *Cursor[T] {
+func (c *Cursor[T]) ClonePrev() *Cursor[T] {
 
 	return &Cursor[T]{list: c.list, current: c.current.prev}
 }
@@ -34,14 +22,14 @@ func (c *Cursor[T]) Node() *Node[T] {
 	return nil
 }
 
-func (c *Cursor[T]) NextNode() *Node[T] {
+func (c *Cursor[T]) NodeNext() *Node[T] {
 	if c.current.next != &c.list.root {
 		return c.current.next
 	}
 	return nil
 }
 
-func (c *Cursor[T]) PrevNode() *Node[T] {
+func (c *Cursor[T]) NodePrev() *Node[T] {
 	if c.current.prev != &c.list.root {
 		return c.current.prev
 	}
@@ -82,36 +70,34 @@ func (c *Cursor[T]) MoveToBack() bool {
 	return true
 }
 
-func (c *Cursor[T]) Ascending(iter IterFunc[T]) {
+func (c *Cursor[T]) WalkAscending(f func(n *Node[T]) bool) {
 	if c.list.len > 0 {
 
 		if c.current != &c.list.root {
-			if !iter(c.current) {
+			if !f(c.current) {
 				return
 			}
 		}
 
 		for c.MoveNext() != nil {
-			if !iter(c.current) {
+			if !f(c.current) {
 				return
 			}
 		}
-
 	}
-
 }
 
-func (c *Cursor[T]) Descending(iter IterFunc[T]) {
+func (c *Cursor[T]) WalkDescending(f func(n *Node[T]) bool) {
 	if c.list.len > 0 {
 
 		if c.current != &c.list.root {
-			if !iter(c.current) {
+			if !f(c.current) {
 				return
 			}
 		}
 
 		for c.MovePrev() != nil {
-			if !iter(c.current) {
+			if !f(c.current) {
 				return
 			}
 		}
@@ -124,18 +110,7 @@ func (c *Cursor[T]) Clone() *Cursor[T] {
 	return &Cursor[T]{list: c.list, current: c.current}
 }
 
-//func (c *Cursor[T]) MoveNext() bool {
-//	if c.current.next == &c.list.root {
-//		return false
-//	}
-//	c.current = c.current.next
-//	return true
-//}
-//
-//func (c *Cursor[T]) MovePrev() bool {
-//	if c.current.prev == &c.list.root {
-//		return false
-//	}
-//	c.current = c.current.prev
-//	return true
-//}
+func (c *Cursor[T]) Close() {
+	c.list = nil
+	c.current = nil
+}

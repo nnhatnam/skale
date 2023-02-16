@@ -26,7 +26,7 @@ func TestList(t *testing.T) {
 	checkListPointers(t, l, []*Node[any]{e.Node()})
 	l.MoveToBack(e)
 	checkListPointers(t, l, []*Node[any]{e.Node()})
-	l.RemoveCurrent(e)
+	l.RemoveAt(e)
 	checkListPointers(t, l, []*Node[any]{})
 
 	// Bigger linked list
@@ -40,7 +40,7 @@ func TestList(t *testing.T) {
 	e4 := l.BackCursor()
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e2.Node(), e3.Node(), e4.Node()})
 
-	l.RemoveCurrent(e2)
+	l.RemoveAt(e2)
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e3.Node(), e4.Node()})
 
 	l.MoveToFront(e3) // move from middle
@@ -61,37 +61,37 @@ func TestList(t *testing.T) {
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e3.Node()})
 
 	l.InsertBefore(2, e1) // insert before front
-	e2 = e1.PrevCursor()
+	e2 = e1.ClonePrev()
 	checkListPointers(t, l, []*Node[any]{e2.Node(), e1.Node(), e4.Node(), e3.Node()})
 
-	l.RemoveCurrent(e2)
+	l.RemoveAt(e2)
 	l.InsertBefore(2, e4) // insert before middle
-	e2 = e4.PrevCursor()
+	e2 = e4.ClonePrev()
 
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e2.Node(), e4.Node(), e3.Node()})
-	l.RemoveCurrent(e2)
+	l.RemoveAt(e2)
 	l.InsertBefore(2, e3) // insert before back
-	e2 = e3.PrevCursor()
+	e2 = e3.ClonePrev()
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e2.Node(), e3.Node()})
-	l.RemoveCurrent(e2)
+	l.RemoveAt(e2)
 
 	l.InsertAfter(2, e1) // insert after front
-	e2 = e1.NextCursor()
+	e2 = e1.CloneNext()
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e2.Node(), e4.Node(), e3.Node()})
-	l.RemoveCurrent(e2)
+	l.RemoveAt(e2)
 	l.InsertAfter(2, e4) // insert after middle
-	e2 = e4.NextCursor()
+	e2 = e4.CloneNext()
 
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e2.Node(), e3.Node()})
-	l.RemoveCurrent(e2)
+	l.RemoveAt(e2)
 	l.InsertAfter(2, e3) // insert after back
-	e2 = e3.NextCursor()
+	e2 = e3.CloneNext()
 	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e3.Node(), e2.Node()})
-	l.RemoveCurrent(e2)
+	l.RemoveAt(e2)
 
 	// Check standard iteration.
 	sum := 0
-	l.Cursor().Ascending(func(n *Node[any]) bool {
+	l.Cursor().WalkAscending(func(n *Node[any]) bool {
 		if i, ok := n.Value.(int); ok {
 			sum += i
 		}
@@ -170,7 +170,7 @@ func TestIssue4103(t *testing.T) {
 	l2.PushBack(4)
 
 	e := l1.FrontCursor()
-	l2.RemoveCurrent(e) // l2 should not change because e is not a cursor of l2
+	l2.RemoveAt(e) // l2 should not change because e is not a cursor of l2
 	if n := l2.Len(); n != 2 {
 		t.Errorf("l2.Len() = %d, want 2", n)
 	}
@@ -191,10 +191,10 @@ func TestRemoveV2(t *testing.T) {
 	checkListPointers(t, l, []*Node[int]{e1.Node(), e2.Node()})
 
 	e := l.FrontCursor()
-	l.RemoveCurrent(e) // e moves to next element
+	l.RemoveAt(e) // e moves to next element
 	checkListPointers(t, l, []*Node[int]{e2.Node()})
 
-	l.RemoveCurrent(e) // e moves to "dummy" element
+	l.RemoveAt(e) // e moves to "dummy" element
 	checkListPointers(t, l, []*Node[int]{})
 
 }
@@ -205,14 +205,14 @@ func TestIssue6349V2(t *testing.T) {
 	l.PushBack(2)
 
 	e := l.FrontCursor()
-	l.RemoveCurrent(e)
+	l.RemoveAt(e)
 	if e.Node().Value != 2 {
 		t.Errorf("e.value = %d, want 1", e.Node().Value)
 	}
-	if e.NextNode() != nil {
+	if e.NodeNext() != nil {
 		t.Errorf("e.Next() != nil")
 	}
-	if e.PrevNode() != nil {
+	if e.NodePrev() != nil {
 		t.Errorf("e.Prev() != nil")
 	}
 }
@@ -272,7 +272,7 @@ func TestZeroListV2(t *testing.T) {
 	checkList(t, l4, []int{1})
 }
 
-// Test that a linkedlist l is not modified when calling InsertBefore with a mark that is not an Node of l.
+// Test that a linked list l is not modified when calling InsertBefore with a mark that is not an Node of l.
 func TestInsertBeforeUnknownMark(t *testing.T) {
 	var l List[int]
 	l.PushBack(1)
@@ -282,7 +282,7 @@ func TestInsertBeforeUnknownMark(t *testing.T) {
 	checkList(t, &l, []int{1, 2, 3})
 }
 
-// Test that a linkedlist l is not modified when calling InsertAfter with a mark that is not an Node of l.
+// Test that a linked list l is not modified when calling InsertAfter with a mark that is not an Node of l.
 func TestInsertAfterUnknownMark(t *testing.T) {
 	var l List[int]
 	l.PushBack(1)
@@ -292,7 +292,7 @@ func TestInsertAfterUnknownMark(t *testing.T) {
 	checkList(t, &l, []int{1, 2, 3})
 }
 
-// Test that a linkedlist l is not modified when calling MoveAfter or MoveBefore with a mark that is not an Node of l.
+// Test that a linked list l is not modified when calling MoveAfter or MoveBefore with a mark that is not an Node of l.
 func TestMoveUnknownMark(t *testing.T) {
 	var l1 List[int]
 	l1.PushBack(1)
