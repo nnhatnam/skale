@@ -1,4 +1,5 @@
-// Package linkedlist implements a doubly linked list data structure that is intended to be used internally by other packages.
+// Package linkedlist implements a doubly linked list data structure.
+// It is intended to be used internally by other packages.
 //
 // Structure is not thread safe.
 //
