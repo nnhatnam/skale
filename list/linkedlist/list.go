@@ -28,8 +28,8 @@
 //
 // To iterate over a list (where l is a *List):
 //
-//	cursor := l.Cursor() // create a cursor point to the sentinel node
-//	for n := cursor.Next(); n != nil; n = cursor.Next() {
+//	cursor := l.Cursor() // create a cursor point to first node
+//	for n := cursor.MoveNext(); n != nil; n = cursor.MoveNext() {
 //		// do something with n
 //	}
 //
@@ -38,8 +38,8 @@
 //	cursor := l.Cursor() // create a cursor point to the sentinel node
 //	for cursor.MoveNext() != nil {
 //		n := cursor.Node()
-//			// do something with n
-//		}
+//		// do something with n
+//	}
 package linkedlist
 
 // List represents a doubly linked list.
