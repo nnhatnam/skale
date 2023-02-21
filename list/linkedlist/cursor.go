@@ -17,6 +17,11 @@ type Cursor[T any] struct {
 	current *Node[T]
 }
 
+// Equal returns true if the two cursors point to the same node in the same list.
+func (c *Cursor[T]) Equal(c2 *Cursor[T]) bool {
+	return c.list == c2.list && c.current == c2.current
+}
+
 // Clone creates a new cursor that points to the same node as the current cursor.
 func (c *Cursor[T]) Clone() *Cursor[T] {
 	return &Cursor[T]{list: c.list, current: c.current}

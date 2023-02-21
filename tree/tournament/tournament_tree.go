@@ -133,7 +133,6 @@ func (t *TTree[T]) print() {
 
 func (t *TTree[T]) insert(v T) {
 
-	fmt.Println("inserttttttttttttttttttttttt v: ", v)
 	t.lazyInit()
 
 	// i := 1 => t.internal[i] = 1 and t.leaf[ 2*i - len(t.internal) ] = 1
@@ -171,6 +170,6 @@ func (t *TTree[T]) insert(v T) {
 
 }
 
-func (t *TTree[T]) update(v T) {
+func (t *TTree[T]) matchUp(v T) {
 
 }
