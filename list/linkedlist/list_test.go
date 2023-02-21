@@ -11,6 +11,48 @@ func traverse[T any](t *testing.T, l *List[T]) {
 	}
 }
 
+func TestNew(t *testing.T) {
+	l := New[any]()
+	if l == nil {
+		t.Errorf("New[any]() = nil, want non-nil")
+	}
+
+	if l.Len() != 0 {
+		t.Errorf("l.Len() = %d, want 0", l.Len())
+	}
+
+	if l.Front() != nil {
+		t.Errorf("l.Front() = %v, want nil", l.Front())
+	}
+
+	if l.Back() != nil {
+		t.Errorf("l.Back() = %v, want nil", l.Back())
+	}
+
+}
+
+func TestFrom(t *testing.T) {
+
+	l := From[int]([]int{1, 2, 3, 4, 5}...)
+
+	if l == nil {
+		t.Errorf("From[int]([]int{1, 2, 3, 4, 5}...) = nil, want non-nil")
+	}
+
+	if l.Len() != 5 {
+		t.Errorf("l.Len() = %d, want 5", l.Len())
+	}
+
+	if l.Front().Value != 1 {
+		t.Errorf("l.Front() = %v, want 1", l.Front())
+	}
+
+	if l.Back().Value != 5 {
+		t.Errorf("l.Back() = %v, want 5", l.Back())
+	}
+
+}
+
 func TestList(t *testing.T) {
 
 	l := New[any]()
