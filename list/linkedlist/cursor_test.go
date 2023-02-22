@@ -114,7 +114,7 @@ func TestNewCursor(t *testing.T) {
 
 }
 
-func TestCursor_Clone(t *testing.T) {
+func TestCursorClone(t *testing.T) {
 	l := New[any]()
 	c := l.Cursor()
 	c2 := c.Clone()
@@ -204,7 +204,7 @@ func TestCursor_Clone(t *testing.T) {
 
 }
 
-func TestCursor_Move(t *testing.T) {
+func TestCursorMove(t *testing.T) {
 
 	l := New[int]()
 	c := l.Cursor()
@@ -324,6 +324,162 @@ func TestCursor_Move(t *testing.T) {
 
 	if c.Node().Value != 2 {
 		t.Errorf("Cursor.MoveToBack().Node().Value = %v, want 2", c.Node().Value)
+	}
+
+}
+
+func TestCursorWalk(t *testing.T) {
+
+	l := New[string]()
+	c := l.Cursor()
+
+	// Test Walk on an empty list
+	c.WalkAscending(func(c *Node[string]) bool {
+		t.Errorf("Cursor.WalkAscending() called on an empty list")
+		return true
+	})
+
+	c.WalkDescending(func(c *Node[string]) bool {
+		t.Errorf("Cursor.WalkDescending() called on an empty list")
+		return true
+	})
+
+	checkCursor(t, l, []*Cursor[string]{c})
+
+	// Test Walk on a list with one element
+	l.PushBack("1")
+
+	c.WalkAscending(func(c *Node[string]) bool {
+		if c.Value != "1" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 1", c.Value)
+		}
+		return true
+	})
+
+	c.WalkDescending(func(c *Node[string]) bool {
+		if c.Value != "1" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 1", c.Value)
+		}
+		return true
+	})
+
+	checkCursor(t, l, []*Cursor[string]{c})
+
+	if c.current != &l.root {
+		t.Errorf("Cursor.WalkDescending() = %v, want %v", c.current, &l.root)
+	}
+
+	// Test Walk on a list with more than one element
+	l.PushBack("2")
+
+	c.WalkAscending(func(c *Node[string]) bool {
+		if c.Value != "1" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 1", c.Value)
+		}
+		return false
+	})
+
+	if c.current != l.root.next {
+		t.Errorf("Cursor.WalkAscending() = %v, want %v", c.current, l.root.next)
+	}
+
+	// The walker supposed to not move in this case
+	c.WalkAscending(func(c *Node[string]) bool {
+		if c.Value != "1" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 1", c.Value)
+		}
+		return false
+	})
+
+	// move to "2"
+	c.WalkAscending(func(c *Node[string]) bool {
+		if c.Value == "2" {
+			return false // stop walking
+		}
+		return true
+	})
+
+	if c.current != l.root.prev {
+		t.Errorf("Cursor.WalkAscending() = %v, want %v", c.current, l.root.prev)
+	}
+
+	// move to sentinel
+	c.WalkAscending(func(c *Node[string]) bool {
+		if c.Value != "2" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 2", c.Value)
+		}
+		return true
+	})
+
+	if c.current != &l.root {
+		t.Errorf("Cursor.WalkAscending() = %v, want %v", c.current, &l.root)
+	}
+
+	c.WalkDescending(func(c *Node[string]) bool {
+		if c.Value != "2" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 2", c.Value)
+		}
+		return false
+	})
+
+	if c.current != l.root.prev {
+		t.Errorf("Cursor.WalkDescending() = %v, want %v", c.current, l.root.prev)
+	}
+
+	// The walker supposed to not move in this case
+	c.WalkDescending(func(c *Node[string]) bool {
+		if c.Value != "2" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 2", c.Value)
+		}
+		return false
+	})
+
+	// move to "1"
+	c.WalkDescending(func(c *Node[string]) bool {
+		if c.Value == "1" {
+			return false // stop walking
+		}
+		return true
+	})
+
+	if c.current != l.root.next {
+		t.Errorf("Cursor.WalkDescending() = %v, want %v", c.current, l.root.next)
+	}
+
+	// move to sentinel
+	c.WalkDescending(func(c *Node[string]) bool {
+		if c.Value != "1" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 1", c.Value)
+		}
+		return true
+	})
+
+	if c.current != &l.root {
+		t.Errorf("Cursor.WalkDescending() = %v, want %v", c.current, &l.root)
+	}
+
+}
+
+func TestCursorClose(t *testing.T) {
+
+	l := New[string]()
+	c := l.Cursor()
+
+	// Test Close on an empty list
+	c.Close()
+
+	if c.current != nil || c.list != nil {
+		t.Errorf("Cursor.Close() = %v, %v, want nil, nil", c.current, c.list)
+	}
+
+	// Test Close on a list with one element
+	l.PushBack("1")
+
+	c = l.FrontCursor()
+	c.Close()
+
+	if c.current != nil || c.list != nil {
+		t.Errorf("Cursor.Close() = %v, %v, want nil, nil", c.current, c.list)
 	}
 
 }

@@ -211,18 +211,26 @@ func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *Node[T] {
 	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
-	return c.list.insertValue(v, c.current.prev)
+	if c.IsValid() {
+		return c.list.insertValue(v, c.current.prev)
+	}
+
+	return nil
 }
 
 // InsertAfter inserts a new value v after the cursor c, return the new node. cursor c stays at the same position after the insertion.
 // If c is point to the sentinel node, InsertAfter inserts to the head (same effect as PushFront).
-// If c is not associated with l, InsertAfter returns nil.
+// If c is not associated with l or invalid, InsertAfter returns nil.
 // The complexity is O(1).
 func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *Node[T] {
 	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
-	return c.list.insertValue(v, c.current)
+	if c.IsValid() {
+		return c.list.insertValue(v, c.current)
+	}
+
+	return nil
 }
 
 // RemoveAt removes the node at the cursor c, return the removed node. Cursor c move to the next node after the removal.
@@ -232,10 +240,15 @@ func (l *List[T]) RemoveAt(c *Cursor[T]) *Node[T] {
 	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
-	n := c.current
-	c.current = c.current.next
-	c.list.remove(n)
-	return n
+
+	if c.IsValid() {
+		n := c.current
+		c.current = c.current.next
+		c.list.remove(n)
+		return n
+	}
+
+	return nil
 }
 
 // RemoveAfter removes the node after the cursor c, return the removed node. Cursor c stays at the same position after the removal.
@@ -246,7 +259,12 @@ func (l *List[T]) RemoveAfter(c *Cursor[T]) *Node[T] {
 	if c.list != l || l.root.prev == c.current {
 		return nil
 	}
-	return c.list.remove(c.current.next)
+
+	if c.IsValid() {
+		return c.list.remove(c.current.next)
+	}
+
+	return nil
 
 }
 
@@ -259,29 +277,39 @@ func (l *List[T]) RemoveBefore(c *Cursor[T]) *Node[T] {
 	if c.list != l || l.root.next == c.current {
 		return nil
 	}
-	return c.list.remove(c.current.prev)
+
+	if c.IsValid() {
+		return c.list.remove(c.current.prev)
+	}
+	return nil
 }
 
 // MoveToFront moves the node at the cursor c to the front of the list.
-// It does nothing if c is point to the sentinel node or not associated with l.
+// It does nothing if c is point to the sentinel node, invalid or not associated with l.
 // The complexity is O(1).
 func (l *List[T]) MoveToFront(c *Cursor[T]) {
 	if c.list != l || l.root.next == c.current {
 		return
 	}
 
-	l.move(c.current, &l.root)
+	if c.IsValid() {
+		l.move(c.current, &l.root)
+	}
+
 }
 
 // MoveToBack moves the node at the cursor c to the back of the list.
-// It does nothing if c is point to the sentinel node or not associated with l.
+// It does nothing if c is point to the sentinel node, invalid or not associated with l.
 // The complexity is O(1).
 func (l *List[T]) MoveToBack(c *Cursor[T]) {
 	if c.list != l || l.root.prev == c.current {
 		return
 	}
 
-	l.move(c.current, l.root.prev)
+	if c.IsValid() {
+		l.move(c.current, l.root.prev)
+	}
+
 }
 
 // MoveBefore moves the node at the cursor c to the position before the cursor mark.
@@ -291,7 +319,11 @@ func (l *List[T]) MoveBefore(c, mark *Cursor[T]) {
 	if c.list != l || c.current == mark.current || mark.list != l {
 		return
 	}
-	l.move(c.current, mark.current.prev)
+
+	if c.IsValid() && mark.IsValid() {
+		l.move(c.current, mark.current.prev)
+	}
+
 }
 
 // MoveAfter moves the node at the cursor c to the position after the cursor mark.
@@ -301,7 +333,10 @@ func (l *List[T]) MoveAfter(c, mark *Cursor[T]) {
 	if c.list != l || c.current == mark.current || mark.list != l {
 		return
 	}
-	l.move(c.current, mark.current)
+
+	if c.IsValid() && mark.IsValid() {
+		l.move(c.current, mark.current)
+	}
 }
 
 // Cursor returns a cursor pointing to the sentinel node of the list.
