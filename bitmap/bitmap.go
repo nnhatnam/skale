@@ -1,5 +1,7 @@
 package bitmap
 
+import "math/bits"
+
 type BitMap struct {
 	len    uint
 	blocks []uint64
@@ -7,9 +9,10 @@ type BitMap struct {
 
 // NewBitMap returns a new BitMap with the given length.
 func NewBitMap(len uint) *BitMap {
+
 	return &BitMap{
 		len:    len,
-		blocks: make([]uint64, (len+63)>>6),
+		blocks: make([]uint64, (len+63)>>6), // equivalent to (len + 64 - 1) / 64
 	}
 }
 
@@ -59,6 +62,42 @@ func (b *BitMap) Clear(i uint) *BitMap {
 	return b
 }
 
+func (b *BitMap) ClearRange(start, end uint) *BitMap {
+	if start >= b.len || end >= b.len {
+		panic("index out of range")
+	}
+	if start > end {
+		panic("start index must be less than end index")
+	}
+
+	blockStart := start >> 6
+	bitStart := start & 63
+
+	blockEnd := end >> 6
+	bitEnd := end & 63
+
+	if blockStart == blockEnd {
+		b.blocks[blockStart] &^= ((1 << (bitEnd + 1)) - 1) << bitStart
+		return b
+	}
+
+	b.blocks[blockStart] &^= (1 << (64 - bitStart)) - 1
+	for i := blockStart + 1; i < blockEnd; i++ {
+		b.blocks[i] = 0
+	}
+	b.blocks[blockEnd] &^= (1 << (bitEnd + 1)) - 1
+
+	return b
+}
+
+// ClearAll sets all bits to 0. Panics if the bitmap is empty.
+func (b *BitMap) ClearAll() *BitMap {
+	for i := range b.blocks {
+		b.blocks[i] = 0
+	}
+	return b
+}
+
 // Get returns the value of a bit at the given index.
 func (b *BitMap) Get(i uint) bool {
 	if i >= b.len {
@@ -104,4 +143,121 @@ func (b *BitMap) Flip(i uint) *BitMap {
 
 	b.blocks[blockIndex] ^= 1 << bitIndex // flip the bit
 	return b
+}
+
+// IsEmpty returns true contains no bits sets to 1.
+func (b *BitMap) IsEmpty() bool {
+	for _, block := range b.blocks {
+		if block != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// All returns true if all bits are set to 1. Panics if the bitmap is nil.
+func (b *BitMap) All() bool {
+	for _, block := range b.blocks {
+		if block != ^uint64(0) { // TODO: investigate why this faster than using constant
+			return false
+		}
+	}
+	return true
+}
+
+// Any returns true if any bit is set to 1. Panics if the bitmap is nil.
+func (b *BitMap) Any() bool {
+	for _, block := range b.blocks {
+		if block != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// PopCount returns the number of bits set to 1.
+//func (b *BitMap) PopCount() uint64 {
+//	var count uint64
+//	for _, block := range b.blocks {
+//		count += popCount(block)
+//	}
+//	return count
+//}
+
+// Count returns the number of bits set to 1.
+func (b *BitMap) Count() uint64 {
+	var count int
+	for _, block := range b.blocks {
+		count += bits.OnesCount64(block)
+	}
+	return uint64(count)
+}
+
+// And performs a bitwise AND operation between two bitmaps. Store the  result in the receiver b.
+// Panics if the bitmaps have different lengths.
+func (b *BitMap) And(other *BitMap) *BitMap {
+	if b.len != other.len {
+		panic("length mismatch")
+	}
+	for i := range b.blocks {
+		b.blocks[i] &= other.blocks[i]
+	}
+	return b
+}
+
+// AndNot performs a bitwise AND NOT operation between two bitmaps. Store the  result in the receiver b.
+// Panics if the bitmaps have different lengths.
+func (b *BitMap) AndNot(other *BitMap) *BitMap {
+	if b.len != other.len {
+		panic("length mismatch")
+	}
+	for i := range b.blocks {
+		b.blocks[i] &^= other.blocks[i]
+	}
+	return b
+}
+
+// Or performs a bitwise OR operation between two bitmaps. Store the  result in the receiver b.
+// Panics if the bitmaps have different lengths.
+func (b *BitMap) Or(other *BitMap) *BitMap {
+	if b.len != other.len {
+		panic("length mismatch")
+	}
+	for i := range b.blocks {
+		b.blocks[i] |= other.blocks[i]
+	}
+	return b
+}
+
+// Xor performs a bitwise XOR operation between two bitmaps. Store the  result in the receiver b.
+// Panics if the bitmaps have different lengths.
+func (b *BitMap) Xor(other *BitMap) *BitMap {
+	if b.len != other.len {
+		panic("length mismatch")
+	}
+	for i := range b.blocks {
+		b.blocks[i] ^= other.blocks[i]
+	}
+	return b
+}
+
+// Not performs a bitwise NOT operation on the bitmap. Store the  result in the receiver b.
+func (b *BitMap) Not() *BitMap {
+	for i := range b.blocks {
+		b.blocks[i] = ^b.blocks[i]
+	}
+	return b
+}
+
+// Equal returns true if two bitmaps are equal.
+func (b *BitMap) Equal(other *BitMap) bool {
+	if b.len != other.len {
+		return false
+	}
+	for i := range b.blocks {
+		if b.blocks[i] != other.blocks[i] {
+			return false
+		}
+	}
+	return true
 }
