@@ -552,4 +552,8 @@ func TestCursorInvalid(t *testing.T) {
 		t.Errorf("Cursor.IsValid() = %v, want false", c1.IsValid())
 	}
 
+	if l.InsertAfter(5, c1) != nil {
+		t.Errorf("Cursor.InsertAfter() = %v, want nil", l.InsertAfter(5, c1))
+	}
+
 }
