@@ -67,7 +67,7 @@ func (c *Cursor[T]) ClonePrev() *Cursor[T] {
 
 // Node returns the node that the cursor points to.
 func (c *Cursor[T]) Node() *Node[T] {
-	if c.current != &c.list.root {
+	if c.current != &c.list.root && c.IsValid() {
 		return c.current
 	}
 	return nil
@@ -76,7 +76,7 @@ func (c *Cursor[T]) Node() *Node[T] {
 // NodeNext returns the node after the node the cursor is currently pointing to.
 // Return nil if the cursor is pointing to the last node in the list.
 func (c *Cursor[T]) NodeNext() *Node[T] {
-	if c.current.next != &c.list.root {
+	if c.current.next != &c.list.root && c.IsValid() {
 		return c.current.next
 	}
 	return nil
@@ -85,7 +85,7 @@ func (c *Cursor[T]) NodeNext() *Node[T] {
 // NodePrev returns the node before the node the cursor is currently pointing to.
 // Return nil if the cursor is pointing to the first node in the list.
 func (c *Cursor[T]) NodePrev() *Node[T] {
-	if c.current.prev != &c.list.root {
+	if c.current.prev != &c.list.root && c.IsValid() {
 		return c.current.prev
 	}
 	return nil

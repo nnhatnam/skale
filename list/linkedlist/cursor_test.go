@@ -483,3 +483,73 @@ func TestCursorClose(t *testing.T) {
 	}
 
 }
+
+func TestCursorInvalid(t *testing.T) {
+
+	l := New[int]()
+
+	l.PushBack(1)
+	c1 := l.Cursor()
+	c2 := l.FrontCursor()
+	c3 := l.BackCursor()
+
+	l.PopFront()
+
+	if c1.Node() != nil {
+		t.Errorf("Cursor.Node() = %v, want nil", c1.Node())
+	}
+
+	if c2.Node() != nil {
+		t.Errorf("Cursor.Node() = %v, want nil", c2.Node())
+	}
+
+	if c3.Node() != nil {
+		t.Errorf("Cursor.Node() = %v, want nil", c3.Node())
+	}
+
+	if !c1.IsValid() {
+		t.Errorf("Cursor.IsValid() = %v, want true", c1.IsValid())
+	}
+
+	if c2.IsValid() {
+		t.Errorf("Cursor.IsValid() = %v, want false", c2.IsValid())
+	}
+
+	if c3.IsValid() {
+		t.Errorf("Cursor.IsValid() = %v, want false", c3.IsValid())
+	}
+
+	//clone invalid cursor
+	invalid1 := c2.Clone()
+	invalid2 := c2.CloneNext()
+	invalid3 := c2.ClonePrev()
+
+	if invalid1 != nil || invalid2 != nil || invalid3 != nil {
+		t.Errorf("Cursor.Clone() = %v, %v, %v, want nil, nil, nil", invalid1, invalid2, invalid3)
+	}
+
+	l.PushBack(2)
+	l.PushBack(3)
+
+	c1 = l.FrontCursor()
+	c2 = l.FrontCursor()
+
+	l.RemoveAt(c1) // <-- this should invalidate c2
+
+	if c2.IsValid() {
+		t.Errorf("Cursor.IsValid() = %v, want false", c2.IsValid())
+	}
+
+	if !c1.IsValid() {
+		t.Errorf("Cursor.IsValid() = %v, want true", c1.IsValid())
+	}
+
+	l.PushBack(4)
+	c3 = l.BackCursor()
+	l.RemoveBefore(c3) // <-- this should invalidate c1
+
+	if c1.IsValid() {
+		t.Errorf("Cursor.IsValid() = %v, want false", c1.IsValid())
+	}
+
+}
