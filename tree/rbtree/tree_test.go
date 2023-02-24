@@ -15,7 +15,6 @@ func countFrom[T any](n *Node[T]) int {
 }
 
 func TestCases(t *testing.T) {
-	//test cases from https://github.com/petar/GoLLRB
 
 	tree := NewOrdered[int]()
 	tree.ReplaceOrInsert(1)
@@ -259,7 +258,6 @@ func TestInsertNoReplace(t *testing.T) {
 
 func TestTreeGet(t *testing.T) {
 
-	// test cases from Gods(https://github.com/emirpasic/gods)
 	tree := NewOrdered[int]()
 
 	if count := tree.Len(); count != 0 {

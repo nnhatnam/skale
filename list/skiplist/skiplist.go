@@ -6,60 +6,76 @@ import (
 	"time"
 )
 
-type node[T any] struct {
-	next []*node[T]
+type Node[T any] struct {
+	next []*Node[T]
 
-	value *T // value stored in the node
+	prev *Node[T]
+
+	value T // value stored in the node
 }
 
 // must supply level
-func newNode[T any](value T, level uint8) *node[T] {
-	return &node[T]{value: &value, next: make([]*node[T], level, level)}
+func newNode[T any](value T, level int) *Node[T] {
+	return &Node[T]{value: value, next: make([]*Node[T], level+1, level+1)}
 }
 
-func (n *node[T]) Next() *node[T] {
+func (n *Node[T]) Next() *Node[T] {
 	return n.next[0]
 }
 
-func (n *node[T]) NextAt(level int) *node[T] {
+func (n *Node[T]) NextAt(level int) *Node[T] {
 	return n.next[level]
 }
 
+func (n *Node[T]) Value() T {
+	return n.value
+}
+
 type SkipList[T any] struct {
-	head *node[T]
+	root Node[T]
 
 	less skale.LessFunc[T]
 
-	maxLevel uint8
+	maxLevel int
 	p        float64
 
-	fingers []*node[T] // for faster search
+	fingers []*Node[T] // for faster search
 
-	size int // number of elements in the list
+	len int // number of elements in the list
+
 }
 
-func New[T any](maxLevel uint8, p float64, less skale.LessFunc[T]) *SkipList[T] {
+func New[T any](maxLevel int, p float64, less skale.LessFunc[T]) *SkipList[T] {
+
 	l := &SkipList[T]{
-		head:     newNode[T](nil, maxLevel),
 		maxLevel: maxLevel,
 		p:        p,
 		less:     less,
-		fingers:  make([]*node[T], maxLevel, maxLevel),
+		fingers:  make([]*Node[T], maxLevel+1, maxLevel+1),
 	}
 
-	var i uint8
-	for i = 0; i < l.maxLevel; i++ {
-		l.fingers[i] = l.head
+	l.root.next = make([]*Node[T], maxLevel+1, maxLevel+1) // [0, maxLevel]
+	l.root.prev = &l.root
+
+	var i int
+	for i = 0; i <= l.maxLevel; i++ {
+		l.root.next[i] = &l.root
+		l.fingers[i] = &l.root
 	}
 
 	return l
 }
 
+func NewOrdered[T skale.Ordered](maxLevel int, p float64) *SkipList[T] {
+	return New[T](maxLevel, p, skale.Less[T]())
+}
+
 var generator = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func (l *SkipList[T]) generateLevel() (level uint8) {
+func (l *SkipList[T]) generateLevel() (level int) {
 
-	for level = uint8(0); level < uint8(l.maxLevel); level++ {
+	for level = 0; level < l.maxLevel; level++ {
+
 		if generator.Float64() > l.p {
 			return
 		}
@@ -68,14 +84,15 @@ func (l *SkipList[T]) generateLevel() (level uint8) {
 	return
 }
 
-// cachePrev will cache the prev node list in the fingers
-func (l *SkipList[T]) getPrevAndCache(value T, from *node[T]) {
+// getPrevAndCache will cache the prev node list in the fingers, starting from the given node `from`.
+// `form` will be the starting point for the search. If `from` is nil, the search will start from the head.
+func (l *SkipList[T]) getPrevAndCacheFrom(value T, from *Node[T]) {
 
 	prevNode, currNode := from, from // from is the starting point
 
 	for i := l.maxLevel; i >= 0; i-- {
 
-		if currNode.next[i] != nil && l.less(*currNode.value, value) {
+		if currNode.next[i] != nil && l.less(currNode.value, value) {
 			prevNode = currNode
 			currNode = currNode.Next()
 		}
@@ -86,63 +103,232 @@ func (l *SkipList[T]) getPrevAndCache(value T, from *node[T]) {
 
 }
 
-func (l *SkipList[T]) replaceOrInsert(value T, level uint8) {
+//func (l *SkipList[T]) getPrevAndCachev1(value T) (curr *Node[T]) {
+//
+//	var j int
+//
+//	if l.fingers[l.maxLevel] != &l.root && l.less(value, l.fingers[l.maxLevel].value) {
+//		j = l.maxLevel
+//	} else {
+//		j = sort.Search(l.maxLevel, func(i int) bool {
+//
+//			if l.fingers[i].next[i] == &l.root || l.less(value, l.fingers[i].next[i].value) {
+//				return true
+//			}
+//			return false
+//
+//		})
+//
+//		if j > 0 {
+//			j--
+//		}
+//	}
+//
+//	curr = l.fingers[j]
+//
+//	// prevNode, currNode := from, from // from is the starting point
+//
+//	for i := j; i >= 0; i-- {
+//
+//		for curr.next[i] != &l.root && l.less(curr.next[i].value, value) {
+//			curr = curr.next[i]
+//		}
+//
+//		l.fingers[i] = curr
+//
+//	}
+//
+//	return
+//
+//}
 
-	curr := l.head
+func (l *SkipList[T]) getPrevAndCache(value T) (curr *Node[T]) {
+	var j int
+	for i := 0; i <= l.maxLevel; i++ {
+		if l.fingers[i] == &l.root || l.less(l.fingers[i].value, value) {
+			j = i
+			break
+		}
+	}
 
-	n := newNode[T](value, level)
+	curr = l.fingers[j]
 
-	if curr == nil {
+	// prevNode, currNode := from, from // from is the starting point
 
-		for i := level; i >= 0; i-- {
-			l.head.next[i] = n
+	for i := j; i >= 0; i-- {
+
+		for curr.next[i] != &l.root && l.less(curr.next[i].value, value) {
+			curr = curr.next[i]
 		}
 
-		l.size++
-		return
+		l.fingers[i] = curr
+
 	}
 
-	l.getPrevAndCache(value, l.fingers[0])
+	return
 
-	if !l.less(*l.fingers[0].value, value) {
-		// replace
-		l.fingers[0].value = &value
-		return
+}
+
+func (l *SkipList[T]) insertNoReplace(v T, level int) {
+
+	l.getPrevAndCache(v)
+
+	n := newNode[T](v, level)
+
+	n.prev = l.getPrevAndCache(v)
+	n.next[0] = l.fingers[0].next[0]
+	n.next[0].prev = n
+	l.fingers[0].next[0] = n
+
+	for i := 1; i < len(n.next); i++ {
+		n.next[i] = l.fingers[i].next[i]
+		l.fingers[i].next[i] = n
+	}
+	l.len++
+
+}
+
+func (l *SkipList[T]) replaceOrInsert(v T, level int) (_ T, _ bool) {
+
+	curr := l.get(v)
+
+	if curr != nil {
+		old := curr.value
+		curr.value = v
+		return old, true
 	}
 
-	l.size++
-	// insert
-	for i := level; i >= 0; i-- {
+	n := newNode[T](v, level)
+
+	n.prev = l.fingers[0]
+	n.next[0] = l.fingers[0].next[0]
+	n.next[0].prev = n
+	l.fingers[0].next[0] = n
+
+	for i := 1; i < len(n.next); i++ {
 		n.next[i] = l.fingers[i].next[i]
 		l.fingers[i].next[i] = n
 	}
 
+	l.len++
+
+	return
+
 }
 
-func (l *SkipList[T]) delete(value T) {
+func (l *SkipList[T]) get(value T) *Node[T] {
 
-	if l.less(*l.fingers[0].value, value) {
-		l.getPrevAndCache(value, l.fingers[0])
-	} else {
-		l.getPrevAndCache(value, l.head)
+	prev := l.getPrevAndCache(value)
+
+	next := prev.next[0]
+
+	if next == &l.root || l.less(value, next.value) {
+		return nil
 	}
 
-	if l.less(value, *l.fingers[0].value) {
+	return next
+}
+
+func (l *SkipList[T]) delete(value T) *Node[T] {
+
+	prev := l.getPrevAndCache(value)
+	next := prev.next[0]
+
+	if next == &l.root || l.less(value, next.value) {
+		return nil // not found
+	}
+
+	l.len--
+
+	l.fingers[0].next[0] = next.next[0]
+	next.next[0].prev = l.fingers[0]
+	next.prev = nil
+	next.next[0] = nil
+
+	for i := len(next.next) - 1; i > 0; i-- {
+		l.fingers[i].next[i] = next.next[i]
+		next.next[i] = nil
+	}
+
+	return next // found
+}
+
+func (l *SkipList[T]) ReplaceOrInsert(value T) (_ T, _ bool) {
+
+	level := l.generateLevel()
+
+	return l.replaceOrInsert(value, level)
+}
+
+func (l *SkipList[T]) InsertNoReplace(value T) {
+
+	level := l.generateLevel()
+
+	l.insertNoReplace(value, level)
+}
+
+func (l *SkipList[T]) Get(value T) (_ T, _ bool) {
+
+	n := l.get(value)
+
+	if n == nil {
 		return
 	}
 
-	l.size--
+	return n.value, true
+}
 
-	for i := l.maxLevel; i >= 0; i-- {
-		if l.fingers[i].next[i] != nil && !l.less(value, *l.fingers[i].next[i].value) {
-			l.fingers[i].next[i] = l.fingers[i].next[i].next[i]
+func (l *SkipList[T]) Delete(value T) (_ T, _ bool) {
+
+	n := l.delete(value)
+
+	if n == nil {
+		return
+	}
+
+	return n.value, true
+}
+
+func (l *SkipList[T]) Len() int {
+	return l.len
+}
+
+func (l *SkipList[T]) Has(value T) bool {
+	return l.get(value) != nil
+}
+
+// Ascend calls the iterator for every value in the list within the range [first, last], until iterator returns false.
+func (l *SkipList[T]) Ascend(iter ItemIterator[T]) {
+	for n := l.root.next[0]; n != &l.root; n = n.next[0] {
+		if !iter(n.value) {
+			return
 		}
 	}
 }
 
-func (l *SkipList[T]) Insert(value T) {
+// AscendRange calls the iterator for every value in the list within the range [first, last], until iterator returns false.
+func (l *SkipList[T]) AscendRange(first, last T, iter ItemIterator[T]) {
+	for n := l.getPrevAndCache(first).next[0]; n != &l.root && l.less(n.value, last); n = n.next[0] {
+		if !iter(n.value) {
+			return
+		}
+	}
+}
 
-	level := l.generateLevel()
+// AscendGreaterOrEqual calls the iterator for every value in the list within the range [first, last], until iterator returns false.
+func (l *SkipList[T]) AscendGreaterOrEqual(first T, iter ItemIterator[T]) {
+	for n := l.getPrevAndCache(first).next[0]; n != &l.root; n = n.next[0] {
+		if !iter(n.value) {
+			return
+		}
+	}
+}
 
-	l.replaceOrInsert(value, level)
+// AscendLessThan calls the iterator for every value in the list within the range [first, last], until iterator returns false.
+func (l *SkipList[T]) AscendLessThan(last T, iter ItemIterator[T]) {
+	for n := l.root.next[0]; n != &l.root && l.less(n.value, last); n = n.next[0] {
+		if !iter(n.value) {
+			return
+		}
+	}
 }
