@@ -22,6 +22,17 @@ type Cursor[T any] struct {
 	current *Node[T]
 }
 
+// NewCursor creates a new cursor that points to the given node in the list.
+// NewCursor returns nil if the given node is nil.
+// NewCursor doesn't check if the given node is actually in the list, and it can make unexpected bug if the given node is not in the list.
+// It is the caller's responsibility to ensure that the node is in the list. Use with caution. It's recommended to use List.Cursor() instead.
+func NewCursor[T any](list *List[T], current *Node[T]) *Cursor[T] {
+	if current == nil || list == nil {
+		return nil
+	}
+	return &Cursor[T]{list: list, current: current}
+}
+
 // Equal returns true if the two cursors point to the same node in the same list.
 // if either cursor is not valid, it returns false.
 func (c *Cursor[T]) Equal(c2 *Cursor[T]) bool {

@@ -75,16 +75,16 @@ func (l *List[T]) back() *Node[T] {
 }
 
 // insert inserts a node after mark. The mask must not be nil.
-func (l *List[T]) insert(n, at *Node[T]) *Node[T] {
+func (l *List[T]) insert(n, mark *Node[T]) *Node[T] {
 
-	//n after at, n before at.next
-	n.prev = at
-	n.next = at.next
+	//n after mark, n before mark.next
+	n.prev = mark
+	n.next = mark.next
 
-	//at before n
-	at.next = n
+	//mark before n
+	mark.next = n
 
-	//n before at.next
+	//n before mark.next
 	n.next.prev = n
 	l.len++
 	return n
