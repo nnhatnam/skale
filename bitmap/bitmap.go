@@ -39,6 +39,34 @@ func (b *BitMap) Set(i uint) *BitMap {
 	return b
 }
 
+func (b *BitMap) SetRange(start, end uint) *BitMap {
+	if start >= b.len || end >= b.len {
+		panic("index out of range")
+	}
+	if start > end {
+		panic("start index must be less than end index")
+	}
+
+	blockStart := start >> 6
+	bitStart := start & 63
+
+	blockEnd := end >> 6
+	bitEnd := end & 63
+
+	if blockStart == blockEnd {
+		b.blocks[blockStart] |= ((1 << (bitEnd + 1)) - 1) << bitStart
+		return b
+	}
+
+	b.blocks[blockStart] |= (1 << (64 - bitStart)) - 1
+	for i := blockStart + 1; i < blockEnd; i++ {
+		b.blocks[i] = ^uint64(0)
+	}
+	b.blocks[blockEnd] |= (1 << (bitEnd + 1)) - 1
+
+	return b
+}
+
 // Clear sets a bit at the given index to 0.
 func (b *BitMap) Clear(i uint) *BitMap {
 	if i >= b.len {
@@ -260,4 +288,74 @@ func (b *BitMap) Equal(other *BitMap) bool {
 		}
 	}
 	return true
+}
+
+func (b *BitMap) NextClearBit(i uint) uint {
+	if i >= b.len {
+		return b.len
+	}
+	blockIndex := i >> 6 // find block index, equivalent to i / 64
+	bitIndex := i & 63   // find bit index in the block, equivalent to i % 64
+
+	for int(blockIndex) < len(b.blocks) {
+		if b.blocks[blockIndex]&(1<<bitIndex) == 0 {
+			return blockIndex*64 + bitIndex
+		}
+		bitIndex++
+		if bitIndex == 64 {
+			bitIndex = 0
+			blockIndex++
+		}
+	}
+	return b.len
+}
+
+func (b *BitMap) NextSetBit(i uint) uint {
+	if i >= b.len {
+		return b.len
+	}
+	blockIndex := i >> 6 // find block index, equivalent to i / 64
+	bitIndex := i & 63   // find bit index in the block, equivalent to i % 64
+
+	for int(blockIndex) < len(b.blocks) {
+		if b.blocks[blockIndex]&(1<<bitIndex) != 0 {
+			return blockIndex*64 + bitIndex
+		}
+		bitIndex++
+		if bitIndex == 64 {
+			bitIndex = 0
+			blockIndex++
+		}
+	}
+	return b.len
+}
+
+// PreviousBit returns the biggest index of a bit which value is lookFor before startIndex (inclusive). Returns -1 if there is no such bits before startIndex. If startIndex >= size returns -1
+func (b *BitMap) PreviousBit(startIndex uint, lookFor bool) int {
+	if startIndex >= b.len {
+		return -1
+	}
+	blockIndex := startIndex >> 6 // find block index, equivalent to i / 64
+	bitIndex := startIndex & 63   // find bit index in the block, equivalent to i % 64
+
+	for int(blockIndex) >= 0 {
+		if (b.blocks[blockIndex]&(1<<bitIndex) != 0) == lookFor {
+			return int(blockIndex*64 + bitIndex)
+		}
+		if bitIndex == 0 {
+			bitIndex = 63
+			blockIndex--
+		} else {
+			bitIndex--
+		}
+	}
+	return -1
+}
+
+func (b *BitMap) PreviousClearBit(startIndex uint) uint {
+	return uint(b.PreviousBit(startIndex, false))
+}
+
+func (b *BitMap) PreviousSetBit(startIndex uint) uint {
+	return uint(b.PreviousBit(startIndex, true))
 }
