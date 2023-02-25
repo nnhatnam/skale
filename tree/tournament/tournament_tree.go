@@ -64,21 +64,20 @@ func (t *TTree[T]) updateH(h int) {
 	t.maxLeaf = 1 << h
 }
 
-// i : t.leaf[i] is the newly added node, i = len(t.leaf)
+// leafIdx : t.leaf[leafIdx] is the newly added node, leafIdx = len(t.leaf)
 // j : t.internal[j] is the match that i is going to against
 // h : height of the match
-func (t *TTree[T]) matchDown(i, j, h int) int {
-	fmt.Println("matchDown: ", i, j, h, t.lastInternalIdx())
+func (t *TTree[T]) matchDown(leafIdx, internalIdx, h int) int {
 
-	if j > t.lastInternalIdx() {
-		return t.matchDown(i, j-(1<<(h-2)), h-1)
+	if internalIdx > t.lastInternalIdx() {
+		return t.matchDown(leafIdx, internalIdx-(1<<(h-2)), h-1)
 	}
 
 	//fmt.Println("j , internal: ", j, len(t.internal))
 
-	if j < t.lastInternalIdx() && h > 1 {
-		t.internal[j] = t.matchDown(i, j+(1<<(h-2)), h-1)
-		return t.internal[j]
+	if internalIdx < t.lastInternalIdx() && h > 1 {
+		t.internal[internalIdx] = t.matchDown(leafIdx, internalIdx+(1<<(h-2)), h-1)
+		return t.internal[internalIdx]
 	}
 
 	var r, l int
@@ -86,35 +85,35 @@ func (t *TTree[T]) matchDown(i, j, h int) int {
 	// j == t.lastInternalIdx()
 	if h == 1 {
 
-		l = j
-		r = j + 1
+		l = internalIdx
+		r = internalIdx + 1
 
-		if r > i {
-			r = i
+		if r > leafIdx {
+			r = leafIdx
 		}
 
 		if t.less(t.leaf[l], t.leaf[r]) {
-			t.internal[j] = l
+			t.internal[internalIdx] = l
 			return l
 		}
 
-		t.internal[j] = r
+		t.internal[internalIdx] = r
 		return r
 
 	}
 
-	l = j - (1 << (h - 2))
-	r = j + (1 << (h - 2))
+	l = internalIdx - (1 << (h - 2))
+	r = internalIdx + (1 << (h - 2))
 
-	if r > i {
-		r = i
+	if r > leafIdx {
+		r = leafIdx
 	}
 
 	if t.less(t.leaf[l], t.leaf[r]) {
-		t.internal[j] = l
+		t.internal[internalIdx] = l
 		return l
 	}
-	t.internal[j] = r
+	t.internal[internalIdx] = r
 	return r
 }
 
@@ -170,6 +169,112 @@ func (t *TTree[T]) insert(v T) {
 
 }
 
-func (t *TTree[T]) matchUp(v T) {
+// matchUp matches internal[i] with internal[j]. i is the replaced node
+func (t *TTree[T]) matchUp(i, h int) {
+
+	if i == t.root {
+		return
+	}
+
+	if h > 0 {
+		space := 1 << h    // space between i and j, 2^h
+		iH := i<<(h-1) + 1 // index of i at level h
+
+		if iH%2 != 0 { // i is the left child
+			j := i + space
+			parent := (i + j) / 2 // parent of i and j
+
+			if t.less(t.leaf[t.internal[i]], t.leaf[t.internal[j]]) {
+				t.internal[parent] = i
+
+				t.matchUp(parent, h+1)
+				return
+			} else {
+
+				if !t.less(t.leaf[t.internal[j]], t.leaf[t.internal[parent]]) && !t.less(t.leaf[t.internal[parent]], t.leaf[t.internal[j]]) {
+					return
+				}
+
+				t.internal[parent] = j
+				t.matchUp(parent, h+1)
+				return
+			}
+
+		} else { // i is the right child
+			j := i - space
+			parent := (i + j) / 2 // parent of i and j
+
+			if t.less(t.leaf[t.internal[j]], t.leaf[t.internal[i]]) {
+				t.internal[parent] = i
+
+				t.matchUp(parent, h+1)
+				return
+			} else {
+
+				if !t.less(t.leaf[t.internal[j]], t.leaf[t.internal[parent]]) && !t.less(t.leaf[t.internal[parent]], t.leaf[t.internal[j]]) {
+					return
+				}
+
+				t.internal[parent] = j
+				t.matchUp(parent, h+1)
+				return
+
+			}
+		}
+	}
+
+}
+
+func (t *TTree[T]) deleteMin() {
+	//delte t.root
+	//replace t.root with t.lastLeafIdx()
+	//matchUp t.root
+
+	var zero T
+
+	if t.leafCount() == 1 {
+		t.root = 0
+		t.h = 0
+		t.maxLeaf = 0
+		t.leaf = t.leaf[:1]
+		t.internal = t.internal[:1]
+		return
+	}
+
+	last := t.lastLeafIdx()
+
+	t.leaf[t.root] = t.leaf[last]
+
+	t.leaf[t.lastLeafIdx()] = zero
+	t.leaf = t.leaf[:t.lastLeafIdx()]
+	t.internal[t.lastInternalIdx()] = 0
+	t.internal = t.internal[:t.lastInternalIdx()]
+
+	var l, r, p int
+
+	if t.root%2 == 0 { // root is the right child
+		r = t.root
+		r = t.root - 1
+	} else {
+		l = t.root
+		if t.root+1 >= len(t.leaf) {
+			return
+		}
+		r = t.root + 1
+	}
+
+	p = t.internal[t.root]
+
+	if t.less(t.leaf[t.root], t.leaf[t.root+1]) {
+		t.internal[p] = t.root
+		t.matchUp(p, 1)
+	} else {
+		t.internal[p] = t.root + 1
+		t.matchUp(p, 1)
+	}
+
+	t.matchUp(t.root, 1)
+
+	t.matchUp(t.lastLeafIdx(), 1)
 
 }
