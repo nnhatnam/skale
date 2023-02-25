@@ -326,3 +326,33 @@ func TestInsertNoReplace(t *testing.T) {
 		return true
 	})
 }
+
+// Test case from https://github.com/google/btree
+
+func intRange(s int, reverse bool) []int {
+	out := make([]int, s)
+	for i := 0; i < s; i++ {
+		v := i
+		if reverse {
+			v = s - i - 1
+		}
+		out[i] = v
+	}
+	return out
+}
+
+func intAll(l *SkipList[int]) (out []int) {
+	l.Ascend(func(a int) bool {
+		out = append(out, a)
+		return true
+	})
+	return
+}
+
+func intAllRev(l *SkipList[int]) (out []int) {
+	l.Descend(func(a int) bool {
+		out = append(out, a)
+		return true
+	})
+	return
+}

@@ -289,6 +289,30 @@ func (l *SkipList[T]) Delete(value T) (_ T, _ bool) {
 	return n.value, true
 }
 
+// DeleteMin deletes the minimum value in the list and returns it. If no such value exists, returns (zero-value, false).
+func (l *SkipList[T]) DeleteMin() (_ T, _ bool) {
+
+	n := l.root.next[0]
+
+	if n == &l.root {
+		return
+	}
+
+	return l.delete(n.value).value, true
+}
+
+// DeleteMax deletes the maximum value in the list and returns it. If no such value exists, returns (zero-value, false).
+func (l *SkipList[T]) DeleteMax() (_ T, _ bool) {
+
+	n := l.root.prev
+
+	if n == &l.root {
+		return
+	}
+
+	return l.delete(n.value).value, true
+}
+
 func (l *SkipList[T]) Len() int {
 	return l.len
 }
@@ -385,5 +409,26 @@ func (l *SkipList[T]) DescendRange(lessOrEqual, greaterThan T, iter ItemIterator
 			return
 		}
 	}
+}
 
+func (l *SkipList[T]) Max() (_ T, _ bool) {
+
+	n := l.root.prev
+
+	if n == &l.root {
+		return
+	}
+
+	return n.value, true
+}
+
+func (l *SkipList[T]) Min() (_ T, _ bool) {
+
+	n := l.root.next[0]
+
+	if n == &l.root {
+		return
+	}
+
+	return n.value, true
 }
