@@ -332,3 +332,58 @@ func (l *SkipList[T]) AscendLessThan(last T, iter ItemIterator[T]) {
 		}
 	}
 }
+
+// Descend calls the iterator for every value in the list within the range [first, last], until iterator returns false.
+func (l *SkipList[T]) Descend(iter ItemIterator[T]) {
+	for n := l.root.prev; n != &l.root; n = n.prev {
+		if !iter(n.value) {
+			return
+		}
+	}
+}
+
+// DescendLessOrEqual calls the iterator for every value in the list within the range [pivot, first], until iterator returns false.
+func (l *SkipList[T]) DescendLessOrEqual(pivot T, iter ItemIterator[T]) {
+
+	n := l.getPrevAndCache(pivot)
+
+	//in case of duplicate values, we need to start from the first one
+	for n.next[0] != &l.root && !l.less(pivot, n.next[0].value) {
+		n = n.next[0]
+	}
+
+	for ; n != &l.root; n = n.prev {
+		if !iter(n.value) {
+			return
+		}
+	}
+}
+
+// DescendGreaterThan calls the iterator for every value in the list within the range [last, pivot), until iterator returns false.
+func (l *SkipList[T]) DescendGreaterThan(pivot T, iter ItemIterator[T]) {
+
+	for n := l.root.prev; n != &l.root && l.less(pivot, n.value); n = n.prev {
+		if !iter(n.value) {
+			return
+		}
+	}
+
+}
+
+// DescendRange calls the iterator for every value in the list within the range [lessOrEqual, greaterThan), until iterator returns false.
+func (l *SkipList[T]) DescendRange(lessOrEqual, greaterThan T, iter ItemIterator[T]) {
+
+	n := l.getPrevAndCache(lessOrEqual)
+
+	// in case we have multiple values equal to lessOrEqual, we need to find the last one
+	for n.next[0] != &l.root && !l.less(lessOrEqual, n.next[0].value) {
+		n = n.next[0]
+	}
+
+	for ; n != &l.root && l.less(greaterThan, n.value); n = n.prev {
+		if !iter(n.value) {
+			return
+		}
+	}
+
+}
