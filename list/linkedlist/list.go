@@ -58,6 +58,21 @@ func New[T any]() *List[T] {
 	return l
 }
 
+// Init initializes or clears list l.
+func (l *List[T]) Init() *List[T] {
+	l.root.next = &l.root
+	l.root.prev = &l.root
+	l.len = 0
+	return l
+}
+
+// lazyInit lazily initializes a zero List value.
+func (l *List[T]) lazyInit() {
+	if l.root.next == nil {
+		l.Init()
+	}
+}
+
 // first returns the first node in the list
 func (l *List[T]) front() *Node[T] {
 	if l.len == 0 {
@@ -109,6 +124,7 @@ func (l *List[T]) move(e, at *Node[T]) {
 	e.next.prev = e
 }
 
+// remove removes n from the list. The node must not be nil.
 func (l *List[T]) remove(n *Node[T]) *Node[T] {
 
 	//node before n is now before n.next
@@ -186,7 +202,10 @@ func (l *List[T]) PopFront() *Node[T] {
 	l.lazyInit()
 
 	n := l.front()
-	return l.remove(n)
+	if n != nil {
+		return l.remove(n)
+	}
+	return nil
 
 }
 
@@ -199,7 +218,11 @@ func (l *List[T]) PopBack() *Node[T] {
 		return nil
 	}
 	n := l.back()
-	return l.remove(n)
+	if n != nil {
+		return l.remove(n)
+	}
+
+	return nil
 
 }
 

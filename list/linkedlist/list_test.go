@@ -1,6 +1,7 @@
 package linkedlist
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -351,4 +352,71 @@ func TestMoveUnknownMark(t *testing.T) {
 	l1.MoveBefore(c1, c2)
 	checkList(t, &l1, []int{1})
 	checkList(t, &l2, []int{2})
+}
+
+func TestPopFront(t *testing.T) {
+	var l = &List[int]{}
+
+	fmt.Println(l.PopFront())
+
+	if n := l.PopFront(); n != nil {
+		t.Errorf("PopFront() = %v, want nil", n)
+	}
+
+	l = New[int]()
+	if n := l.PopFront(); n != nil {
+		t.Errorf("PopFront() = %v, want nil", n)
+	}
+
+	l.PushBack(1)
+	if n := l.PopFront(); n.Value != 1 {
+		t.Errorf("PopFront() = %v, want 1", n)
+	}
+
+	l.PushBack(1)
+	l.PushBack(2)
+	if n := l.PopFront(); n.Value != 1 {
+		t.Errorf("PopFront() = %v, want 1", n)
+	}
+
+	if n := l.PopFront(); n.Value != 2 {
+		t.Errorf("PopFront() = %v, want 2", n)
+	}
+
+	if n := l.PopFront(); n != nil {
+		t.Errorf("PopFront() = %v, want nil", n)
+	}
+}
+
+func TestPopBack(t *testing.T) {
+
+	var l = &List[int]{}
+	if n := l.PopBack(); n != nil {
+		t.Errorf("PopBack() = %v, want nil", n)
+	}
+
+	l = New[int]()
+	if n := l.PopBack(); n != nil {
+		t.Errorf("PopBack() = %v, want nil", n)
+	}
+
+	l.PushBack(1)
+	if n := l.PopBack(); n.Value != 1 {
+		t.Errorf("PopBack() = %v, want 1", n)
+	}
+
+	l.PushBack(1)
+	l.PushBack(2)
+
+	if n := l.PopBack(); n.Value != 2 {
+		t.Errorf("PopBack() = %v, want 2", n)
+	}
+
+	if n := l.PopBack(); n.Value != 1 {
+		t.Errorf("PopBack() = %v, want 1", n)
+	}
+
+	if n := l.PopBack(); n != nil {
+		t.Errorf("PopBack() = %v, want nil", n)
+	}
 }

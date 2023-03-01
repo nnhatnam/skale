@@ -1,20 +1,5 @@
 package linkedlist
 
-// Init initializes or clears list l.
-func (l *List[T]) Init() *List[T] {
-	l.root.next = &l.root
-	l.root.prev = &l.root
-	l.len = 0
-	return l
-}
-
-// lazyInit lazily initializes a zero List value.
-func (l *List[T]) lazyInit() {
-	if l.root.next == nil {
-		l.Init()
-	}
-}
-
 // pushFront inserts a new element e with value v at the front of list l and returns e.
 func (l *List[T]) pushFront(v T) *Node[T] {
 	l.lazyInit()
