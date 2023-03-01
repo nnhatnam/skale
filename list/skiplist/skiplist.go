@@ -120,63 +120,6 @@ func (l *SkipList[T]) generateLevel() (level int) {
 	return
 }
 
-// getPrevAndCache will cache the prev node list in the fingers, starting from the given node `from`.
-// `form` will be the starting point for the search. If `from` is nil, the search will start from the head.
-//func (l *SkipList[T]) getPrevAndCacheFrom(value T, from *Node[T]) {
-//
-//	prevNode, currNode := from, from // from is the starting point
-//
-//	for i := l.maxLevel; i >= 0; i-- {
-//
-//		if currNode.next[i] != nil && l.less(currNode.value, value) {
-//			prevNode = currNode
-//			currNode = currNode.Next()
-//		}
-//
-//		l.fingers[i] = prevNode
-//		currNode = prevNode
-//	}
-//}
-
-//func (l *SkipList[T]) getPrevAndCachev1(value T) (curr *Node[T]) {
-//
-//	var j int
-//
-//	if l.fingers[l.maxLevel] != &l.root && l.less(value, l.fingers[l.maxLevel].value) {
-//		j = l.maxLevel
-//	} else {
-//		j = sort.Search(l.maxLevel, func(i int) bool {
-//
-//			if l.fingers[i].next[i] == &l.root || l.less(value, l.fingers[i].next[i].value) {
-//				return true
-//			}
-//			return false
-//
-//		})
-//
-//		if j > 0 {
-//			j--
-//		}
-//	}
-//
-//	curr = l.fingers[j]
-//
-//	// prevNode, currNode := from, from // from is the starting point
-//
-//	for i := j; i >= 0; i-- {
-//
-//		for curr.next[i] != &l.root && l.less(curr.next[i].value, value) {
-//			curr = curr.next[i]
-//		}
-//
-//		l.fingers[i] = curr
-//
-//	}
-//
-//	return
-//
-//}
-
 // searchPrevAndCache will update the SEARCH finger list and return the prev node.
 func (l *SkipList[T]) searchPrevAndCache(v T) *Node[T] {
 
@@ -214,36 +157,7 @@ func (l *SkipList[T]) searchPrevAndCache(v T) *Node[T] {
 func (l *SkipList[T]) getPrevAndCache(v T) *Node[T] {
 
 	return l.getPrevAndCacheAtLevel(v, 0)
-	//
-	//var j int // where the search starts
-	//
-	//if l.modifiedFingers[l.maxLevel] != &l.root && l.less(v, l.modifiedFingers[l.maxLevel].value) {
-	//	j = l.maxLevel
-	//} else {
-	//	for i := 0; i <= l.maxLevel; i++ {
-	//		j = i
-	//		if l.lessThanL(l.modifiedFingers[i], v) && l.lessThanR(v, l.modifiedFingers[i].next[i]) {
-	//			break
-	//		}
-	//
-	//	}
-	//}
-	//
-	//fmt.Println("found j: ", j, " for value: ", v, "")
-	//
-	//prev := l.modifiedFingers[j]
-	//
-	//for i := j; i >= 0; i-- {
-	//
-	//	for prev.next[i] != &l.root && l.less(prev.next[i].value, v) {
-	//		prev = prev.next[i]
-	//	}
-	//
-	//	l.modifiedFingers[i] = prev
-	//
-	//}
-	//
-	//return l.modifiedFingers[0]
+
 }
 
 func (l *SkipList[T]) getPrevAndCacheAtLevel(v T, level int) *Node[T] {
@@ -251,7 +165,7 @@ func (l *SkipList[T]) getPrevAndCacheAtLevel(v T, level int) *Node[T] {
 
 	for i := level; i <= l.maxLevel; i++ {
 		j = i
-		//fmt.Printf("at level %v, we compare %v with %v and %v, result: %v and %v\n", i, l.modifiedFingers[i].value, v, l.modifiedFingers[i].next[i].value, l.lessThanL(l.modifiedFingers[i], v), l.lessThanR(v, l.modifiedFingers[i].next[i]))
+
 		if l.lessThanL(l.modifiedFingers[i], v) && l.lessThanR(v, l.modifiedFingers[i].next[i]) {
 			// finger < i and i < finger.next[i] (we don't want i <= finger.next[i])
 			break
@@ -263,8 +177,6 @@ func (l *SkipList[T]) getPrevAndCacheAtLevel(v T, level int) *Node[T] {
 		// reset if j at top and finger is NOT on v's right (j == maxLevel and v <= finger[maxLevel])
 		l.modifiedFingers[j] = &l.root
 	}
-
-	//fmt.Println("found j: ", j, " for value: ", v, "")
 
 	prev := l.modifiedFingers[j]
 
@@ -282,73 +194,6 @@ func (l *SkipList[T]) getPrevAndCacheAtLevel(v T, level int) *Node[T] {
 
 }
 
-//
-//func (l *SkipList[T]) getPrevAndCacheAtLevel(v T, level int) (curr *Node[T]) {
-//	var j int // where the search starts
-//
-//	if l.modifiedFingers[l.maxLevel] != &l.root && l.less(v, l.modifiedFingers[l.maxLevel].value) {
-//		j = l.maxLevel
-//	} else {
-//		for i := level; i <= l.maxLevel; i++ {
-//
-//			if l.lessThanL(l.modifiedFingers[i], v) && l.lessThanR(v, l.modifiedFingers[i].next[i]) {
-//				j = i
-//				break
-//			}
-//
-//		}
-//	}
-//
-//	fmt.Println("found j: ", j)
-//
-//	curr = l.modifiedFingers[j]
-//	//fmt.Println("current: ", curr.value, j, curr.next[j].value)
-//
-//	// prevNode, currNode := from, from // from is the starting point
-//
-//	for i := level; i >= 0; i-- {
-//		//fmt.Println("i: ", i, curr.value, curr.next[i].value, curr.next[i] != &l.root, l.less(curr.next[i].value, value), curr.next[i])
-//		for curr.next[i] != &l.root && l.less(curr.next[i].value, v) {
-//			curr = curr.next[i]
-//		}
-//		//fmt.Println("done sir")
-//		l.modifiedFingers[i] = curr
-//
-//	}
-//
-//	return
-//
-//}
-
-//
-//func (l *SkipList[T]) getPrevAndCache(value T) (curr *Node[T]) {
-//	var j int
-//	for i := 0; i <= l.maxLevel; i++ {
-//		if l.fingers[i] == &l.root || l.less(l.fingers[i].value, value) {
-//			j = i
-//			break
-//		}
-//	}
-//
-//	curr = l.fingers[j]
-//	//fmt.Println("current: ", curr.value, j, curr.next[j].value)
-//
-//	// prevNode, currNode := from, from // from is the starting point
-//
-//	for i := j; i >= 0; i-- {
-//		//fmt.Println("i: ", i, curr.value, curr.next[i].value, curr.next[i] != &l.root, l.less(curr.next[i].value, value), curr.next[i])
-//		for curr.next[i] != &l.root && l.less(curr.next[i].value, value) {
-//			curr = curr.next[i]
-//		}
-//		//fmt.Println("done sir")
-//		l.fingers[i] = curr
-//
-//	}
-//
-//	return
-//
-//}
-
 func (l *SkipList[T]) insertNoReplace(v T, level int) {
 
 	prev := l.getPrevAndCacheAtLevel(v, level)
@@ -365,23 +210,12 @@ func (l *SkipList[T]) insertNoReplace(v T, level int) {
 }
 
 func (l *SkipList[T]) replaceOrInsert(v T, level int) (_ T, _ bool) {
-	//fmt.Println("replaceOrInsert: ", v, level)
 	prev := l.getPrevAndCacheAtLevel(v, level)
-	//fmt.Println("prev: ", prev.value)
 
 	next := prev.next[0]
 
 	if next == &l.root || l.less(v, next.value) {
 		//v is not in the list, insert it
-		//fmt.Println("Before insert ", v, level)
-		//l.print()
-		//for i := 0; i <= l.maxLevel; i++ {
-		//	if l.modifiedFingers[i] == &l.root {
-		//		fmt.Printf("finger at level %v (root) is pointing to %v -> %v\n", i, l.modifiedFingers[i].next[i].value, l.modifiedFingers[i].next[i].next[i].value)
-		//		continue
-		//	}
-		//	fmt.Printf("finger at level %v (%v) is pointing to %v -> %v\n", i, l.modifiedFingers[i].value, l.modifiedFingers[i].next[i].value, l.modifiedFingers[i].next[i].next[i].value)
-		//}
 
 		n := newNode[T](v, level)
 
@@ -398,22 +232,9 @@ func (l *SkipList[T]) replaceOrInsert(v T, level int) (_ T, _ bool) {
 
 		l.len++
 
-		//fmt.Println("After insert ", v)
-		//l.print()
-		//for i := 0; i <= l.maxLevel; i++ {
-		//	if l.modifiedFingers[i] == &l.root {
-		//		fmt.Printf("finger at level %v (root) is pointing to %v -> %v\n", i, l.modifiedFingers[i].next[i].value, l.modifiedFingers[i].next[i].next[i].value)
-		//		continue
-		//	}
-		//	fmt.Printf("finger at level %v (%v) is pointing to %v -> %v\n", i, l.modifiedFingers[i].value, l.modifiedFingers[i].next[i].value, l.modifiedFingers[i].next[i].next[i].value)
-		//}
-		//
-		//fmt.Println("done insertion")
-
 		return
 	}
 
-	//fmt.Println("done insertion")
 	//v is in the list, replace it
 	old := next.value
 	next.value = v
@@ -434,24 +255,13 @@ func (l *SkipList[T]) get(value T) *Node[T] {
 }
 
 func (l *SkipList[T]) delete(value T) *Node[T] {
-	//fmt.Println("-----------------------------------delete value: ", value)
+
 	prev := l.getPrevAndCache(value)
-	//for i, v := range l.modifiedFingers {
-	//	if v == &l.root {
-	//		fmt.Printf("finger: root -> %v\n", v.next[i].value)
-	//		continue
-	//	}
-	//	fmt.Printf("finger: %v -> %v\n", v.value, v.next[i].value)
-	//}
-	//fmt.Println("prev: ", prev.value)
 	curr := prev.next[0]
 
 	if curr == &l.root || l.less(value, curr.value) {
 		return nil // not found
 	}
-
-	//fmt.Println("Before delete")
-	//l.print()
 
 	l.len--
 
@@ -471,21 +281,6 @@ func (l *SkipList[T]) delete(value T) *Node[T] {
 		curr.next[i] = nil
 
 	}
-
-	//fmt.Println("verify the fingers after deletion")
-	////verify the fingers
-	//for i := 0; i <= l.maxLevel; i++ {
-	//	//fmt.Println("i: ", i, l.fingers[i].value, l.fingers[i], l.fingers[i].next[i], l.fingers[i].next[i].next[i])
-	//	if l.modifiedFingers[i].next == nil || l.modifiedFingers[i].next[i] == nil || l.modifiedFingers[i].next[i].next[i] == nil {
-	//		log.Fatal("fingers is nil somehow")
-	//		break
-	//	}
-	//}
-	//
-	//fmt.Println("After delete")
-	//l.print()
-	//
-	//fmt.Println("++++++finished deletion++++++")
 
 	return curr // found
 }

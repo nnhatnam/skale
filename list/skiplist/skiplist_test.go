@@ -370,7 +370,7 @@ func intAllRev(l *SkipList[int]) (out []int) {
 func TestSkipListG(t *testing.T) {
 	l := NewOrdered[int](8, 0.5)
 	const lSize = 10000
-	//const lSize = 30
+
 	for i := 0; i < 10; i++ {
 		if min, ok := l.Min(); ok || min != 0 {
 			t.Fatalf("empty min, got %+v", min)
@@ -380,15 +380,14 @@ func TestSkipListG(t *testing.T) {
 			t.Fatalf("empty max, got %+v", max)
 		}
 		for _, item := range rand.Perm(lSize) {
-			//fmt.Println("????? insert ????: ", item)
+
 			if x, ok := l.ReplaceOrInsert(item); ok || x != 0 {
 				t.Fatal("insert found item", item)
 			}
 		}
 
-		//fmt.Println("-------------------------------------------------------------------------------")
 		for _, item := range rand.Perm(lSize) {
-			//fmt.Println("????? insert again ????: ", item)
+
 			if x, ok := l.ReplaceOrInsert(item); !ok || x != item {
 				t.Fatal("insert didn't find item", item)
 			}
@@ -427,7 +426,7 @@ func TestSkipListG(t *testing.T) {
 		})
 
 		for _, item := range rand.Perm(lSize) {
-			//fmt.Println("delete: ", item, lSize)
+
 			if x, ok := l.Delete(item); !ok || x != item {
 				t.Fatalf("didn't find %v", item)
 			}
