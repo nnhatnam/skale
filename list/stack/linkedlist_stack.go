@@ -5,22 +5,22 @@ import (
 )
 
 var (
-	_ Stack[any] = (*LinkedListStack[any])(nil)
+	_ Stack[any] = (*LLStack[any])(nil)
 )
 
-type LinkedListStack[T any] struct {
+type LLStack[T any] struct {
 	e *linkedlist.List[T]
 }
 
-func LinkedListStackFrom[T any](l *linkedlist.List[T]) *LinkedListStack[T] {
-	return &LinkedListStack[T]{e: l}
+func LLStackFrom[T any](l *linkedlist.List[T]) *LLStack[T] {
+	return &LLStack[T]{e: l}
 }
 
-func NewLinkedListStack[T any]() *LinkedListStack[T] {
-	return &LinkedListStack[T]{e: linkedlist.New[T]()}
+func NewLLStack[T any]() *LLStack[T] {
+	return &LLStack[T]{e: linkedlist.New[T]()}
 }
 
-func (s *LinkedListStack[T]) Top() (_ T, _ bool) {
+func (s *LLStack[T]) Top() (_ T, _ bool) {
 	var zero T
 	n := s.e.Back()
 	if n == nil {
@@ -29,15 +29,15 @@ func (s *LinkedListStack[T]) Top() (_ T, _ bool) {
 	return n.Value, true
 }
 
-func (s *LinkedListStack[T]) Len() int {
+func (s *LLStack[T]) Len() int {
 	return s.e.Len()
 }
 
-func (s *LinkedListStack[T]) Push(value T) {
+func (s *LLStack[T]) Push(value T) {
 	s.e.PushBack(value)
 }
 
-func (s *LinkedListStack[T]) Pop() (_ T, _ bool) {
+func (s *LLStack[T]) Pop() (_ T, _ bool) {
 	var zero T
 	n := s.e.PopBack()
 	if n == nil {
@@ -46,15 +46,15 @@ func (s *LinkedListStack[T]) Pop() (_ T, _ bool) {
 	return n.Value, true
 }
 
-func (s *LinkedListStack[T]) Empty() bool {
+func (s *LLStack[T]) Empty() bool {
 	return s.e.Len() == 0
 }
 
-func (s *LinkedListStack[T]) Clear() {
+func (s *LLStack[T]) Clear() {
 	s.e.Init()
 }
 
-func (s *LinkedListStack[T]) ToSlice() []T {
+func (s *LLStack[T]) ToSlice() []T {
 	arr := make([]T, s.e.Len())
 	c := s.e.Cursor()
 	i := 0

@@ -5,30 +5,30 @@ import (
 )
 
 var (
-	_ Queue[any] = (*LinkedListQueue[any])(nil)
+	_ Queue[any] = (*LLQueue[any])(nil)
 )
 
-type LinkedListQueue[T any] struct {
+type LLQueue[T any] struct {
 	e *linkedlist.List[T]
 }
 
-func LinkedListQueueFrom[T any](l *linkedlist.List[T]) *LinkedListQueue[T] {
-	return &LinkedListQueue[T]{e: l}
+func LLQueueFrom[T any](l *linkedlist.List[T]) *LLQueue[T] {
+	return &LLQueue[T]{e: l}
 }
 
-func NewLinkedListQueue[T any]() *LinkedListQueue[T] {
-	return &LinkedListQueue[T]{e: linkedlist.New[T]()}
+func NewLLQueue[T any]() *LLQueue[T] {
+	return &LLQueue[T]{e: linkedlist.New[T]()}
 }
 
-func (s *LinkedListQueue[T]) Len() int {
+func (s *LLQueue[T]) Len() int {
 	return s.e.Len()
 }
 
-func (s *LinkedListQueue[T]) Enqueue(value T) {
+func (s *LLQueue[T]) Enqueue(value T) {
 	s.e.PushBack(value)
 }
 
-func (s *LinkedListQueue[T]) Dequeue() (_ T, _ bool) {
+func (s *LLQueue[T]) Dequeue() (_ T, _ bool) {
 	var zero T
 	n := s.e.PopFront()
 	if n == nil {
@@ -37,7 +37,7 @@ func (s *LinkedListQueue[T]) Dequeue() (_ T, _ bool) {
 	return n.Value, true
 }
 
-func (s *LinkedListQueue[T]) Peek() (_ T, _ bool) {
+func (s *LLQueue[T]) Peek() (_ T, _ bool) {
 	var zero T
 	n := s.e.Front()
 	if n == nil {
@@ -46,15 +46,15 @@ func (s *LinkedListQueue[T]) Peek() (_ T, _ bool) {
 	return n.Value, true
 }
 
-func (s *LinkedListQueue[T]) Empty() bool {
+func (s *LLQueue[T]) Empty() bool {
 	return s.e.Len() == 0
 }
 
-func (s *LinkedListQueue[T]) Clear() {
+func (s *LLQueue[T]) Clear() {
 	s.e.Init()
 }
 
-func (s *LinkedListQueue[T]) ToSlice() []T {
+func (s *LLQueue[T]) ToSlice() []T {
 	var arr []T
 	c := s.e.Cursor()
 

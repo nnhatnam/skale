@@ -1,41 +1,41 @@
 package stack
 
 var (
-	_ Stack[any] = (*SliceStack[any])(nil)
+	_ Stack[any] = (*SStack[any])(nil)
 )
 
-type SliceStack[T any] struct {
+type SStack[T any] struct {
 	e []T
 }
 
-func SliceStackFrom[T any](s []T) *SliceStack[T] {
-	return &SliceStack[T]{e: s}
+func SStackFrom[T any](s []T) *SStack[T] {
+	return &SStack[T]{e: s}
 }
 
-func NewSliceStack[T any]() *SliceStack[T] {
-	return &SliceStack[T]{e: make([]T, 0)}
+func NewSStack[T any]() *SStack[T] {
+	return &SStack[T]{e: make([]T, 0)}
 }
 
-func (s *SliceStack[T]) Empty() bool {
+func (s *SStack[T]) Empty() bool {
 	return len(s.e) == 0
 }
 
-func (s *SliceStack[T]) Top() (_ T, _ bool) {
+func (s *SStack[T]) Top() (_ T, _ bool) {
 	if len(s.e) == 0 {
 		return
 	}
 	return s.e[len(s.e)-1], true
 }
 
-func (s *SliceStack[T]) Len() int {
+func (s *SStack[T]) Len() int {
 	return len(s.e)
 }
 
-func (s *SliceStack[T]) Push(v T) {
+func (s *SStack[T]) Push(v T) {
 	s.e = append(s.e, v)
 }
 
-func (s *SliceStack[T]) Pop() (_ T, _ bool) {
+func (s *SStack[T]) Pop() (_ T, _ bool) {
 	if len(s.e) == 0 {
 		return
 	}
@@ -46,15 +46,30 @@ func (s *SliceStack[T]) Pop() (_ T, _ bool) {
 	return x, true
 }
 
-func (s *SliceStack[T]) Clear() {
+func (s *SStack[T]) Clear() {
 	s.e = nil
 }
 
-func (s *SliceStack[T]) ToSlice() []T {
+func (s *SStack[T]) ToSlice() []T {
 	arr := make([]T, len(s.e))
 	for i, j := 0, len(s.e)-1; j >= 0; i, j = i+1, j-1 {
 		arr[i] = s.e[j]
 	}
 
 	return arr
+}
+
+// Shrink copies the underlying slice with excess capacity to precisely sized one to avoid wasting memory.
+// It should be called on stack with long static durations.
+// Long-lived slices can waste memory on unused capacity, shrink them
+func (s *SStack[T]) Shrink() {
+	//credit from https://about.sourcegraph.com/blog/zoekt-memory-optimizations-for-sourcegraph-cloud
+	if cap(s.e)-len(s.e) < 32 {
+		return
+	}
+
+	out := make([]T, len(s.e))
+	copy(out, s.e)
+	s.e = out
+
 }

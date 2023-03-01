@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestSliceQueueEnqueue(t *testing.T) {
-	queue := NewSliceQueue[int]()
+func TestSQueueEnqueue(t *testing.T) {
+	queue := NewSQueue[int]()
 	if actualValue := queue.Empty(); actualValue != true {
 		t.Errorf("Got %v expected %v", actualValue, true)
 	}
@@ -27,8 +27,8 @@ func TestSliceQueueEnqueue(t *testing.T) {
 	}
 }
 
-func TestSliceQueuePeek(t *testing.T) {
-	queue := NewSliceQueue[int]()
+func TestSQueuePeek(t *testing.T) {
+	queue := NewSQueue[int]()
 	if actualValue, ok := queue.Peek(); actualValue != 0 || ok {
 		t.Errorf("Got %v expected %v", actualValue, nil)
 	}
@@ -40,8 +40,8 @@ func TestSliceQueuePeek(t *testing.T) {
 	}
 }
 
-func TestSliceQueueDequeue(t *testing.T) {
-	queue := NewSliceQueue[int]()
+func TestSQueueDequeue(t *testing.T) {
+	queue := NewSQueue[int]()
 	queue.Enqueue(1)
 	queue.Enqueue(2)
 	queue.Enqueue(3)
@@ -66,10 +66,10 @@ func TestSliceQueueDequeue(t *testing.T) {
 	}
 }
 
-func BenchmarkSliceQueueDequeue100(b *testing.B) {
+func BenchmarkSQueueDequeue100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -77,10 +77,10 @@ func BenchmarkSliceQueueDequeue100(b *testing.B) {
 	benchmarkDequeue(b, queue, size)
 }
 
-func BenchmarkSliceQueueDequeue1000(b *testing.B) {
+func BenchmarkSQueueDequeue1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -88,10 +88,10 @@ func BenchmarkSliceQueueDequeue1000(b *testing.B) {
 	benchmarkDequeue(b, queue, size)
 }
 
-func BenchmarkSliceQueueDequeue10000(b *testing.B) {
+func BenchmarkSQueueDequeue10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -99,10 +99,10 @@ func BenchmarkSliceQueueDequeue10000(b *testing.B) {
 	benchmarkDequeue(b, queue, size)
 }
 
-func BenchmarkSliceQueueDequeue100000(b *testing.B) {
+func BenchmarkSQueueDequeue100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -110,18 +110,18 @@ func BenchmarkSliceQueueDequeue100000(b *testing.B) {
 	benchmarkDequeue(b, queue, size)
 }
 
-func BenchmarkSliceQueueEnqueue100(b *testing.B) {
+func BenchmarkSQueueEnqueue100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	b.StartTimer()
 	benchmarkEnqueue(b, queue, size)
 }
 
-func BenchmarkSliceQueueEnqueue1000(b *testing.B) {
+func BenchmarkSQueueEnqueue1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -129,10 +129,10 @@ func BenchmarkSliceQueueEnqueue1000(b *testing.B) {
 	benchmarkEnqueue(b, queue, size)
 }
 
-func BenchmarkSliceQueueEnqueue10000(b *testing.B) {
+func BenchmarkSQueueEnqueue10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -140,10 +140,10 @@ func BenchmarkSliceQueueEnqueue10000(b *testing.B) {
 	benchmarkEnqueue(b, queue, size)
 }
 
-func BenchmarkSliceQueueEnqueue100000(b *testing.B) {
+func BenchmarkSQueueEnqueue100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	queue := NewSliceQueue[int]()
+	queue := NewSQueue[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}

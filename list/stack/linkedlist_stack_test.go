@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-func TestLinkedListStackPush(t *testing.T) {
-	stack := NewLinkedListStack[int]()
+func TestLLStackPush(t *testing.T) {
+	stack := NewLLStack[int]()
 	if actualValue := stack.Empty(); actualValue != true {
 		t.Errorf("Got %v expected %v", actualValue, true)
 	}
@@ -28,8 +28,8 @@ func TestLinkedListStackPush(t *testing.T) {
 	}
 }
 
-func TestLinkedListStackPeek(t *testing.T) {
-	stack := NewLinkedListStack[int]()
+func TestLLStackPeek(t *testing.T) {
+	stack := NewLLStack[int]()
 	if actualValue, ok := stack.Top(); actualValue != 0 || ok {
 		t.Errorf("Got %v expected %v", actualValue, nil)
 	}
@@ -41,8 +41,8 @@ func TestLinkedListStackPeek(t *testing.T) {
 	}
 }
 
-func TestLinkedListStackPop(t *testing.T) {
-	stack := NewLinkedListStack[int]()
+func TestLLStackPop(t *testing.T) {
+	stack := NewLLStack[int]()
 	stack.Push(1)
 	stack.Push(2)
 	stack.Push(3)
@@ -67,10 +67,10 @@ func TestLinkedListStackPop(t *testing.T) {
 	}
 }
 
-func BenchmarkLinkedListStackPop100(b *testing.B) {
+func BenchmarkLLStackPop100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -78,10 +78,10 @@ func BenchmarkLinkedListStackPop100(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkLinkedListStackPop1000(b *testing.B) {
+func BenchmarkLLStackPop1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -89,10 +89,10 @@ func BenchmarkLinkedListStackPop1000(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkLinkedListStackPop10000(b *testing.B) {
+func BenchmarkLLStackPop10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -100,10 +100,10 @@ func BenchmarkLinkedListStackPop10000(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkLinkedListStackPop100000(b *testing.B) {
+func BenchmarkLLStackPop100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -111,18 +111,18 @@ func BenchmarkLinkedListStackPop100000(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkLinkedListStackPush100(b *testing.B) {
+func BenchmarkLLStackPush100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	b.StartTimer()
 	benchmarkPush(b, stack, size)
 }
 
-func BenchmarkLinkedListStackPush1000(b *testing.B) {
+func BenchmarkLLStackPush1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -130,10 +130,10 @@ func BenchmarkLinkedListStackPush1000(b *testing.B) {
 	benchmarkPush(b, stack, size)
 }
 
-func BenchmarkLinkedListStackPush10000(b *testing.B) {
+func BenchmarkLLStackPush10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -141,10 +141,10 @@ func BenchmarkLinkedListStackPush10000(b *testing.B) {
 	benchmarkPush(b, stack, size)
 }
 
-func BenchmarkLinkedListStackPush100000(b *testing.B) {
+func BenchmarkLLStackPush100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	stack := NewLinkedListStack[int]()
+	stack := NewLLStack[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}

@@ -1,28 +1,28 @@
 package queue
 
-var _ Queue[any] = (*SliceQueue[any])(nil)
+var _ Queue[any] = (*SQueue[any])(nil)
 
-type SliceQueue[T any] struct {
+type SQueue[T any] struct {
 	e []T
 }
 
-func SliceQueueFrom[T any](l []T) *SliceQueue[T] {
-	return &SliceQueue[T]{e: l}
+func SQueueFrom[T any](l []T) *SQueue[T] {
+	return &SQueue[T]{e: l}
 }
 
-func NewSliceQueue[T any]() *SliceQueue[T] {
-	return &SliceQueue[T]{e: make([]T, 0)}
+func NewSQueue[T any]() *SQueue[T] {
+	return &SQueue[T]{e: make([]T, 0)}
 }
 
-func (s *SliceQueue[T]) Len() int {
+func (s *SQueue[T]) Len() int {
 	return len(s.e)
 }
 
-func (s *SliceQueue[T]) Enqueue(value T) {
+func (s *SQueue[T]) Enqueue(value T) {
 	s.e = append(s.e, value)
 }
 
-func (s *SliceQueue[T]) Dequeue() (_ T, _ bool) {
+func (s *SQueue[T]) Dequeue() (_ T, _ bool) {
 	var zero T
 	if len(s.e) == 0 {
 		return zero, false
@@ -32,7 +32,7 @@ func (s *SliceQueue[T]) Dequeue() (_ T, _ bool) {
 	return v, true
 }
 
-func (s *SliceQueue[T]) Peek() (_ T, _ bool) {
+func (s *SQueue[T]) Peek() (_ T, _ bool) {
 	var zero T
 	if len(s.e) == 0 {
 		return zero, false
@@ -40,14 +40,29 @@ func (s *SliceQueue[T]) Peek() (_ T, _ bool) {
 	return s.e[0], true
 }
 
-func (s *SliceQueue[T]) Empty() bool {
+func (s *SQueue[T]) Empty() bool {
 	return len(s.e) == 0
 }
 
-func (s *SliceQueue[T]) Clear() {
+func (s *SQueue[T]) Clear() {
 	s.e = make([]T, 0)
 }
 
-func (s *SliceQueue[T]) ToSlice() []T {
+func (s *SQueue[T]) ToSlice() []T {
 	return s.e
+}
+
+// Shrink copies the underlying slice with excess capacity to precisely sized one to avoid wasting memory.
+// It should be called on queue with long static durations.
+// Long-lived slices can waste memory on unused capacity, shrink them
+func (s *SQueue[T]) Shrink() {
+	//credit from https://about.sourcegraph.com/blog/zoekt-memory-optimizations-for-sourcegraph-cloud
+	if cap(s.e)-len(s.e) < 32 {
+		return
+	}
+
+	out := make([]T, len(s.e))
+	copy(out, s.e)
+	s.e = out
+
 }
