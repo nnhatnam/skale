@@ -8,12 +8,16 @@ type SliceStack[T any] struct {
 	e []T
 }
 
-func (s *SliceStack[T]) Empty() bool {
-	return len(s.e) == 0
+func SliceStackFrom[T any](s []T) *SliceStack[T] {
+	return &SliceStack[T]{e: s}
 }
 
 func NewSliceStack[T any]() *SliceStack[T] {
 	return &SliceStack[T]{e: make([]T, 0)}
+}
+
+func (s *SliceStack[T]) Empty() bool {
+	return len(s.e) == 0
 }
 
 func (s *SliceStack[T]) Top() (_ T, _ bool) {

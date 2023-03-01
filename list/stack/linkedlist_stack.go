@@ -12,7 +12,7 @@ type LinkedListStack[T any] struct {
 	e *linkedlist.List[T]
 }
 
-func From[T any](l *linkedlist.List[T]) *LinkedListStack[T] {
+func LinkedListStackFrom[T any](l *linkedlist.List[T]) *LinkedListStack[T] {
 	return &LinkedListStack[T]{e: l}
 }
 
