@@ -17,7 +17,6 @@ func NewNode[T trie.Elem](value T) *Node[T] {
 type TernaryST[T trie.Elem] struct {
 	root *Node[T]
 	size int
-	//less skale.LessFunc[T]
 }
 
 func New[T trie.Elem]() *TernaryST[T] {
