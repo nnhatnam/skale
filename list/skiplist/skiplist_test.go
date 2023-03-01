@@ -8,6 +8,16 @@ import (
 	"testing"
 )
 
+type nodeIterator[T any] func(node *Node[T]) bool
+
+func (l *SkipList[T]) nodeAscend(iter nodeIterator[T]) {
+	for n := l.root.next[0]; n != &l.root; n = n.next[0] {
+		if !iter(n) {
+			return
+		}
+	}
+}
+
 func TestNew(t *testing.T) {
 	l := NewOrdered[int](64, 0.5)
 
@@ -414,7 +424,7 @@ func TestSkipListG(t *testing.T) {
 			t.Fatalf("mismatch:\n got: %v\nwant: %v", gotrev, wantrev)
 		}
 
-		l.NodeAscend(func(item *Node[int]) bool {
+		l.nodeAscend(func(item *Node[int]) bool {
 
 			for _, ptr := range item.next {
 				if ptr == nil {

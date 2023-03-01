@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Node is an element of a skip list.
 type Node[T any] struct {
 	next []*Node[T]
 
@@ -20,18 +21,12 @@ func newNode[T any](value T, level int) *Node[T] {
 	return &Node[T]{value: value, next: make([]*Node[T], level+1, level+1)}
 }
 
-func (n *Node[T]) Next() *Node[T] {
-	return n.next[0]
-}
-
-func (n *Node[T]) NextAt(level int) *Node[T] {
-	return n.next[level]
-}
-
+// Value returns the value stored in the node.
 func (n *Node[T]) Value() T {
 	return n.value
 }
 
+// SkipList represents a skip list.
 type SkipList[T any] struct {
 	root Node[T]
 
@@ -39,8 +34,6 @@ type SkipList[T any] struct {
 
 	maxLevel int
 	p        float64
-
-	//fingers []*Node[T] // for faster search
 
 	modifiedFingers []*Node[T] // for faster insertion/deletion
 
@@ -123,19 +116,21 @@ func (l *SkipList[T]) generateLevel() (level int) {
 // searchPrevAndCache will update the SEARCH finger list and return the prev node.
 func (l *SkipList[T]) searchPrevAndCache(v T) *Node[T] {
 
-	var j int // where the search starts
+	var j int // j is where the search starts
 
-	if l.searchFingers[l.maxLevel] != &l.root && l.less(v, l.searchFingers[l.maxLevel].value) {
-		j = l.maxLevel
-	} else {
-		for i := 0; i <= l.maxLevel; i++ {
+	for i := 0; i <= l.maxLevel; i++ {
+		j = i
 
-			if l.lessThanL(l.searchFingers[i], v) && l.lessThanR(v, l.searchFingers[i].next[i]) {
-				j = i
-				break
-			}
-
+		if l.lessThanL(l.searchFingers[i], v) && l.lessThanR(v, l.searchFingers[i].next[i]) {
+			// finger < i and i < finger.next[i] (we don't want i <= finger.next[i])
+			break
 		}
+
+	}
+
+	if j == l.maxLevel && !l.lessThanL(l.searchFingers[j], v) {
+		// reset if j at top and finger is NOT on v's right (j == maxLevel and v <= finger[maxLevel])
+		l.searchFingers[j] = &l.root
 	}
 
 	prev := l.searchFingers[j]
@@ -310,6 +305,7 @@ func (l *SkipList[T]) Get(value T) (_ T, _ bool) {
 	return n.value, true
 }
 
+// Delete removes an item equal to the passed in item from the list, returning it. If no such item exists, returns (zeroValue, false).
 func (l *SkipList[T]) Delete(value T) (_ T, _ bool) {
 
 	n := l.delete(value)
@@ -321,7 +317,7 @@ func (l *SkipList[T]) Delete(value T) (_ T, _ bool) {
 	return n.value, true
 }
 
-// DeleteMin deletes the minimum value in the list and returns it. If no such value exists, returns (zero-value, false).
+// DeleteMin deletes the minimum value in the list and returns it. If no such value exists, returns (zeroValue, false).
 func (l *SkipList[T]) DeleteMin() (_ T, _ bool) {
 
 	n := l.root.next[0]
@@ -333,7 +329,7 @@ func (l *SkipList[T]) DeleteMin() (_ T, _ bool) {
 	return l.delete(n.value).value, true
 }
 
-// DeleteMax deletes the maximum value in the list and returns it. If no such value exists, returns (zero-value, false).
+// DeleteMax deletes the maximum value in the list and returns it. If no such value exists, returns (zeroValue, false).
 func (l *SkipList[T]) DeleteMax() (_ T, _ bool) {
 
 	n := l.root.prev
@@ -345,20 +341,14 @@ func (l *SkipList[T]) DeleteMax() (_ T, _ bool) {
 	return l.delete(n.value).value, true
 }
 
+// Len returns the number of items currently in the list.
 func (l *SkipList[T]) Len() int {
 	return l.len
 }
 
+// Has returns true if the given value is in the list
 func (l *SkipList[T]) Has(value T) bool {
 	return l.get(value) != nil
-}
-
-func (l *SkipList[T]) NodeAscend(iter NodeIterator[T]) {
-	for n := l.root.next[0]; n != &l.root; n = n.next[0] {
-		if !iter(n) {
-			return
-		}
-	}
 }
 
 // Ascend calls the iterator for every value in the list within the range [first, last], until iterator returns false.
@@ -370,40 +360,51 @@ func (l *SkipList[T]) Ascend(iter ItemIterator[T]) {
 	}
 }
 
-// AscendRange calls the iterator for every value in the list within the range [first, last], until iterator returns false.
-func (l *SkipList[T]) AscendRange(first, last T, iter ItemIterator[T]) {
-	for n := l.searchPrevAndCache(first).next[0]; n != &l.root && l.less(n.value, last); n = n.next[0] {
+// AscendGreaterOrEqual calls the iterator for every value in the list within the range [pivot , last], until iterator returns false.
+func (l *SkipList[T]) AscendGreaterOrEqual(pivot T, iter ItemIterator[T]) {
+	for n := l.searchPrevAndCache(pivot).next[0]; n != &l.root; n = n.next[0] {
 		if !iter(n.value) {
 			return
 		}
 	}
 }
 
-// AscendGreaterOrEqual calls the iterator for every value in the list within the range [first, last], until iterator returns false.
-func (l *SkipList[T]) AscendGreaterOrEqual(first T, iter ItemIterator[T]) {
-	for n := l.searchPrevAndCache(first).next[0]; n != &l.root; n = n.next[0] {
+// AscendLessThan calls the iterator for every value in the list within the range [first, pivot), until iterator returns false.
+func (l *SkipList[T]) AscendLessThan(pivot T, iter ItemIterator[T]) {
+	for n := l.root.next[0]; n != &l.root && l.less(n.value, pivot); n = n.next[0] {
 		if !iter(n.value) {
 			return
 		}
 	}
 }
 
-// AscendLessThan calls the iterator for every value in the list within the range [first, last], until iterator returns false.
-func (l *SkipList[T]) AscendLessThan(last T, iter ItemIterator[T]) {
-	for n := l.root.next[0]; n != &l.root && l.less(n.value, last); n = n.next[0] {
+// AscendRange calls the iterator for every value in the list within the range [greaterOrEqual, lessThan) , until iterator returns false.
+func (l *SkipList[T]) AscendRange(greaterOrEqual, lessThan T, iter ItemIterator[T]) {
+	for n := l.searchPrevAndCache(greaterOrEqual).next[0]; n != &l.root && l.less(n.value, lessThan); n = n.next[0] {
 		if !iter(n.value) {
 			return
 		}
 	}
 }
 
-// Descend calls the iterator for every value in the list within the range [first, last], until iterator returns false.
+// Descend calls the iterator for every value in the list within the range [last, first], until iterator returns false.
 func (l *SkipList[T]) Descend(iter ItemIterator[T]) {
 	for n := l.root.prev; n != &l.root; n = n.prev {
 		if !iter(n.value) {
 			return
 		}
 	}
+}
+
+// DescendGreaterThan calls the iterator for every value in the list within the range [last, pivot), until iterator returns false.
+func (l *SkipList[T]) DescendGreaterThan(pivot T, iter ItemIterator[T]) {
+
+	for n := l.root.prev; n != &l.root && l.less(pivot, n.value); n = n.prev {
+		if !iter(n.value) {
+			return
+		}
+	}
+
 }
 
 // DescendLessOrEqual calls the iterator for every value in the list within the range [pivot, first], until iterator returns false.
@@ -423,17 +424,6 @@ func (l *SkipList[T]) DescendLessOrEqual(pivot T, iter ItemIterator[T]) {
 	}
 }
 
-// DescendGreaterThan calls the iterator for every value in the list within the range [last, pivot), until iterator returns false.
-func (l *SkipList[T]) DescendGreaterThan(pivot T, iter ItemIterator[T]) {
-
-	for n := l.root.prev; n != &l.root && l.less(pivot, n.value); n = n.prev {
-		if !iter(n.value) {
-			return
-		}
-	}
-
-}
-
 // DescendRange calls the iterator for every value in the list within the range [lessOrEqual, greaterThan), until iterator returns false.
 func (l *SkipList[T]) DescendRange(lessOrEqual, greaterThan T, iter ItemIterator[T]) {
 
@@ -451,6 +441,7 @@ func (l *SkipList[T]) DescendRange(lessOrEqual, greaterThan T, iter ItemIterator
 	}
 }
 
+// Max returns the largest item in the list, or (zeroValue, false) if the list is empty.
 func (l *SkipList[T]) Max() (_ T, _ bool) {
 
 	n := l.root.prev
@@ -462,6 +453,7 @@ func (l *SkipList[T]) Max() (_ T, _ bool) {
 	return n.value, true
 }
 
+// Min returns the smallest item in the list, or (zeroValue, false) if the list is empty.
 func (l *SkipList[T]) Min() (_ T, _ bool) {
 
 	n := l.root.next[0]
