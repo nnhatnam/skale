@@ -1,7 +1,9 @@
 package leftist
 
 import (
+	"container/heap"
 	"golang.org/x/exp/slices"
+	"math/rand"
 	"testing"
 )
 
@@ -262,4 +264,89 @@ func TestDeleteMin(t *testing.T) {
 		t.Errorf("items are not in the right order, want %v but got %v", []int{3, 8, 10, 14, 17, 21, 23, 26}, popItems)
 	}
 
+}
+
+const benchmarkHeapSize = 1000000
+
+func BenchmarkLHeapInsert(b *testing.B) {
+	b.StopTimer()
+	insertP := rand.Perm(benchmarkHeapSize)
+	b.StartTimer()
+	i := 0
+	for i < b.N {
+		h := NewOrdered[int]()
+		for _, item := range insertP {
+			h.Insert(item)
+			i++
+			if i >= b.N {
+				return
+			}
+		}
+	}
+}
+
+func BenchmarkLHeapDeleteMin(b *testing.B) {
+	b.StopTimer()
+	insertP := rand.Perm(benchmarkHeapSize)
+	//removeP := rand.Perm(benchmarkHeapSize)
+	b.StartTimer()
+	i := 0
+	for i < b.N {
+		b.StopTimer()
+		h := NewOrdered[int]()
+		for _, v := range insertP {
+			h.Insert(v)
+		}
+		b.StartTimer()
+		for range insertP {
+			h.DeleteMin()
+			i++
+			if i >= b.N {
+				return
+			}
+		}
+		if h.Len() > 0 {
+			panic(h.Len())
+		}
+	}
+}
+
+type IntHeap []int
+
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *IntHeap) Push(x any) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	*h = append(*h, x.(int))
+}
+
+func (h *IntHeap) Pop() any {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+func BenchmarkHeapInsertInt(b *testing.B) {
+	b.StopTimer()
+	insertP := rand.Perm(benchmarkHeapSize)
+
+	h := &IntHeap{}
+	heap.Init(h)
+	b.StartTimer()
+	i := 0
+	for i < b.N {
+
+		for _, item := range insertP {
+			heap.Push(h, item)
+			i++
+			if i >= b.N {
+				return
+			}
+		}
+	}
 }

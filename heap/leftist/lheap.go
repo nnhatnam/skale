@@ -4,6 +4,7 @@ import (
 	"github.com/nnhatnam/skale"
 )
 
+// Node is a node in a leftist heap.
 type Node[T any] struct {
 	left, right *Node[T]
 	Value       T
@@ -12,6 +13,7 @@ type Node[T any] struct {
 	npl int
 }
 
+// NewNode returns a new node with value v.
 func NewNode[T any](v T) *Node[T] {
 	return &Node[T]{Value: v}
 }
@@ -26,6 +28,7 @@ func (n *Node[T]) npl_() int {
 	return n.npl
 }
 
+// LHeap represents a leftist heap.
 type LHeap[T any] struct {
 	root *Node[T]
 
@@ -115,37 +118,58 @@ func (h *LHeap[T]) deleteMin() (_ T, _ bool) {
 	return min, true
 }
 
+// Insert inserts a value into the heap.
+// Panics if `h` is nil.
+// Time complexity: O(log(n))
 func (h *LHeap[T]) Insert(v T) {
 	h.insert(v)
 }
 
+// InsertBulk inserts multiple values into the heap.
+// Panics if `h` is nil.
+// Time complexity: O(n log(n))
 func (h *LHeap[T]) InsertBulk(vs ...T) {
 	for _, v := range vs {
 		h.insert(v)
 	}
 }
 
+// IsEmpty returns true if the heap is empty.
+// Panics if `h` is nil.
+// Time complexity: O(1)
 func (h *LHeap[T]) IsEmpty() bool {
 	return h.isEmpty()
 }
 
+// FindMin returns the minimum value in the heap. If the heap is empty, it returns the zero value of the type.
+// Panics if `h` is nil.
+// Time complexity: O(1)
 func (h *LHeap[T]) FindMin() T {
 	return h.findMin()
 }
 
+// DeleteMin deletes the minimum value in the heap and returns it. If the heap is empty, (zero value, false) is returned.
+// Panics if `h` is nil.
+// Time complexity: O(log n)
 func (h *LHeap[T]) DeleteMin() (_ T, _ bool) {
 	return h.deleteMin()
 }
 
 // Merge merges heap `other` into `h`. Merge will use the less function of `h` to compare values.
+// After merging, `other` will be empty.
 // If you want to use less function from `other`, you should call `other.Merge(h)`.
 // Panics if `h` is nil.
 func (h *LHeap[T]) Merge(other *LHeap[T]) {
 
 	h.len += other.len_() // panic if h is nil
 	h.root = h.merge(h.root, other.root)
+
+	other.root = nil
+	other.len = 0
+	other.less = nil
 }
 
+// Len returns the number of items in the heap.
 func (h *LHeap[T]) Len() int {
 	return h.len
 }
