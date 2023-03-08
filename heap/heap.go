@@ -21,33 +21,32 @@ func NewOrdered[T skale.Ordered](size ...int) *Heap[T] {
 	return New[T](skale.Less[T](), size...)
 }
 
-func From[T any](less skale.LessFunc[T], e ...[]T) *Heap[T] {
+func From[T any](less skale.LessFunc[T], e []T) *Heap[T] {
 	h := New[T](less)
-	h.e = make([]T, 0, len(e))
+	h.e = make([]T, len(e))
 
-	for i := len(e)/2 - 1; i >= 0; i-- {
-		h.down(i, len(e)-1)
+	copy(h.e, e)
+
+	for i := len(h.e)/2 - 1; i >= 0; i-- {
+		h.down(i)
 	}
 	return h
 }
 
-func FromOrdered[T skale.Ordered](e ...[]T) *Heap[T] {
-	return From[T](skale.Less[T](), e...)
+func FromOrdered[T skale.Ordered](e []T) *Heap[T] {
+	return From[T](skale.Less[T](), e)
 }
 
 // heapify
 func (h *Heap[T]) Init(e []T) {
 	for i := len(e)/2 - 1; i >= 0; i-- {
-		h.down(i, len(e)-1)
+		h.down(i)
 	}
 }
 
 func (h *Heap[T]) up(i int) {
-	for {
 
-		if i == 0 {
-			break
-		}
+	for i > 0 {
 
 		p := (i - 1) >> 1
 
@@ -61,31 +60,26 @@ func (h *Heap[T]) up(i int) {
 	}
 }
 
-func (h *Heap[T]) down(i int, last int) {
+// sift-down procedure, O(log n). `i` is the index of the node to be sifted down.
+func (h *Heap[T]) down(i int) {
 	//current: e[i]
 	//left: e[2i+1]
 	//right: e[2i+2]
 	//parent: e[(i-1)/2]
 
-	for {
-		l := i<<1 + 1
+	last := len(h.e) - 1
+	p := (last - 1) >> 1 // last internal node
 
-		if l > last || l < 0 {
-			break
-		}
+	for i <= p { // p is the last internal node, so it's always have at least one child.
 
-		r := l + 1
-		j := i
+		j := i<<1 + 1 // left won't overflow, but right might overflow
+		r := j + 1
 
-		if h.less(h.e[l], h.e[j]) {
-			j = l
-		}
-
-		if r <= last && r > 0 && h.less(h.e[r], h.e[j]) {
+		if r <= last && r > 0 && h.less(h.e[r], h.e[j]) { // r > 0 is to avoid overflow
 			j = r
 		}
 
-		if j == i {
+		if !h.less(h.e[j], h.e[i]) {
 			break
 		}
 
@@ -101,30 +95,39 @@ func (h *Heap[T]) Push(v T) {
 }
 
 func (h *Heap[T]) Pop() (_ T, _ bool) {
-	if len(h.e) == 0 {
-		return
-	}
-	var zero T
 
-	n := len(h.e)
+	//var zero T
+
+	n := len(h.e) - 1
+
 	v := h.e[0]
-	h.e[0] = h.e[n-1]
 
-	h.e[n-1] = zero //clear the last element
-	h.e = h.e[:n-1]
-	h.down(0, len(h.e)-1)
+	//delete
+	h.e[0] = h.e[n]
+	//h.e[n] = zero //clear the last element
+	h.e = h.e[:n]
+
+	h.down(0)
 	return v, true
 }
 
 func (h *Heap[T]) Remove(i int) (_ T, _ bool) {
-	//var zero T
-	n := len(h.e) - 1
 
-	if n != i {
-		h.e[i], h.e[n] = h.e[n], h.e[i]
-		h.down(i, n)
+	if i == 0 {
+		return h.Pop()
 	}
-	return h.Pop()
+
+	var zero T
+
+	n := len(h.e) - 1
+	v := h.e[i]
+	h.e[i] = h.e[n]
+	h.e[n] = zero //clear the last element
+
+	h.e = h.e[:n]
+	h.down(i)
+
+	return v, true
 }
 
 func (h *Heap[T]) Len() int {

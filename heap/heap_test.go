@@ -1,6 +1,8 @@
 package heap
 
 import (
+	"container/heap"
+	"math/rand"
 	"testing"
 )
 
@@ -28,7 +30,7 @@ func (h *Heap[T]) verify(t *testing.T, i int) {
 func TestInit0(t *testing.T) {
 	var e []int
 	for i := 20; i > 0; i-- {
-		e = append(e, i) // all elements are the same
+		e = append(e, 0) // all elements are the same
 	}
 	h := FromOrdered(e)
 
@@ -51,6 +53,7 @@ func TestInit1(t *testing.T) {
 	for i := 20; i > 0; i-- {
 		h.Push(i) // all elements are different
 	}
+
 	h.verify(t, 0)
 
 	for i := 1; h.Len() > 0; i++ {
@@ -62,6 +65,7 @@ func TestInit1(t *testing.T) {
 		if x != i {
 			t.Errorf("%d.th pop got %d; want %d", i, x, i)
 		}
+
 	}
 }
 
@@ -95,11 +99,6 @@ func Test(t *testing.T) {
 		if x != i {
 			t.Errorf("%d.th pop got %d; want %d", i, x, i)
 		}
-		//if x == 2 {
-		//	fmt.Println("x is ", x)
-		//	fmt.Println("h.e is ", h.e)
-		//	return
-		//}
 
 	}
 }
@@ -114,103 +113,228 @@ func TestRemove0(t *testing.T) {
 	for h.Len() > 0 {
 		i := h.Len() - 1
 		x, success := h.Remove(i)
+
 		if !success {
 			t.Errorf("Remove(%d) failed", i)
 		}
 		if x != i {
 			t.Errorf("Remove(%d) got %d; want %d", i, x, i)
 		}
+		break
 		h.verify(t, 0)
 	}
 }
 
+func TestRemove1(t *testing.T) {
+	h := NewOrdered[int]()
+	for i := 0; i < 10; i++ {
+		h.Push(i)
+	}
+	h.verify(t, 0)
+
+	for i := 0; h.Len() > 0; i++ {
+		x, success := h.Remove(0)
+		if !success {
+			t.Errorf("Remove(0) failed")
+		}
+		if x != i {
+			t.Errorf("Remove(0) got %d; want %d", x, i)
+		}
+		h.verify(t, 0)
+	}
+}
+
+func TestRemove2(t *testing.T) {
+	N := 10
+
+	var e []int
+	for i := 0; i < N; i++ {
+		e = append(e, i)
+	}
+
+	h := FromOrdered(e)
+
+	h.verify(t, 0)
+
+	m := make(map[int]bool)
+	for h.Len() > 0 {
+		x, _ := h.Remove((h.Len() - 1) / 2)
+		m[x] = true
+		h.verify(t, 0)
+	}
+
+	if len(m) != N {
+		t.Errorf("len(m) = %d; want %d", len(m), N)
+	}
+	for i := 0; i < len(m); i++ {
+		if !m[i] {
+			t.Errorf("m[%d] doesn't exist", i)
+		}
+	}
+}
+
+//compare benchmark with container/heap
+
+const benchmarkHeapSize = 1000000
+
+//type IntHeap []int
 //
-//func TestRemove1(t *testing.T) {
-//	h := NewOrdered[int]()
-//	for i := 0; i < 10; i++ {
-//		h.Push(i)
-//	}
-//	h.verify(t, 0)
+//func (h IntHeap) Len() int           { return len(h) }
+//func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+//func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 //
-//	for i := 0; h.Len() > 0; i++ {
-//		x, success := h.Remove(0)
-//		if !success {
-//			t.Errorf("Remove(0) failed")
-//		}
-//		if x != i {
-//			t.Errorf("Remove(0) got %d; want %d", x, i)
-//		}
-//		h.verify(t, 0)
-//	}
+//func (h *IntHeap) Push(x any) {
+//	// Push and Pop use pointer receivers because they modify the slice's length,
+//	// not just its contents.
+//	*h = append(*h, x.(int))
 //}
 //
-//func TestRemove2(t *testing.T) {
-//	N := 10
-//
-//	var e []int
-//	for i := 0; i < N; i++ {
-//		e = append(e, i)
-//	}
-//	h := FromOrdered(e)
-//
-//	h.verify(t, 0)
-//
-//	m := make(map[int]bool)
-//	for h.Len() > 0 {
-//		x, _ := h.Remove((h.Len() - 1) / 2)
-//		m[x] = true
-//		h.verify(t, 0)
-//	}
-//
-//	if len(m) != N {
-//		t.Errorf("len(m) = %d; want %d", len(m), N)
-//	}
-//	for i := 0; i < len(m); i++ {
-//		if !m[i] {
-//			t.Errorf("m[%d] doesn't exist", i)
-//		}
-//	}
-//}
-//
-//func BenchmarkDup(b *testing.B) {
-//	const n = 10000
-//
-//	h := NewOrdered[int](n)
-//	for i := 0; i < b.N; i++ {
-//		for j := 0; j < n; j++ {
-//			h.Push(0) // all elements are the same
-//		}
-//		for h.Len() > 0 {
-//			h.Pop()
-//		}
-//	}
+//func (h *IntHeap) Pop() any {
+//	old := *h
+//	n := len(old)
+//	x := old[n-1]
+//	*h = old[0 : n-1]
+//	return x
 //}
 
-//
-//func TestFix(t *testing.T) {
-//	h := new(myHeap)
-//	h.verify(t, 0)
-//
-//	for i := 200; i > 0; i -= 10 {
-//		Push(h, i)
-//	}
-//	h.verify(t, 0)
-//
-//	if (*h)[0] != 10 {
-//		t.Fatalf("Expected head to be 10, was %d", (*h)[0])
-//	}
-//	(*h)[0] = 210
-//	Fix(h, 0)
-//	h.verify(t, 0)
-//
-//	for i := 100; i > 0; i-- {
-//		elem := rand.Intn(h.Len())
-//		if i&1 == 0 {
-//			(*h)[elem] *= 2
-//		} else {
-//			(*h)[elem] /= 2
-//		}
-//		Fix(h, elem)
-//		h.verify(t, 0)
-//	}
-//}
+type IntHeap []int
+
+func (h *IntHeap) Less(i, j int) bool {
+	return (*h)[i] < (*h)[j]
+}
+
+func (h *IntHeap) Swap(i, j int) {
+	(*h)[i], (*h)[j] = (*h)[j], (*h)[i]
+}
+
+func (h *IntHeap) Len() int {
+	return len(*h)
+}
+
+func (h *IntHeap) Pop() (v any) {
+	//*h, v = (*h)[:h.Len()-1], (*h)[h.Len()-1]
+
+	//var zero int
+
+	n := len(*h) - 1
+
+	v = (*h)[0]
+
+	//delete
+	(*h)[0] = (*h)[n]
+	//(*h)[n] = zero
+	*h = (*h)[:n]
+
+	return v
+}
+
+func (h *IntHeap) Push(v any) {
+	*h = append(*h, v.(int))
+}
+
+func BenchmarkDup(b *testing.B) {
+	const n = 10000
+	h := make(IntHeap, 0, n)
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < n; j++ {
+			heap.Push(&h, 0) // all elements are the same
+		}
+		for h.Len() > 0 {
+			heap.Pop(&h)
+		}
+	}
+}
+
+func BenchmarkDupSkale(b *testing.B) {
+	const n = 10000
+
+	h := NewOrdered[int](n)
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < n; j++ {
+			h.Push(0) // all elements are the same
+		}
+		for h.Len() > 0 {
+			h.Pop()
+		}
+	}
+}
+
+func BenchmarkHeapInsert(b *testing.B) {
+	b.StopTimer()
+	insertP := rand.Perm(benchmarkHeapSize)
+
+	h := &IntHeap{}
+	heap.Init(h)
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		for _, item := range insertP {
+			heap.Push(h, item)
+		}
+	}
+}
+
+func BenchmarkHeapInsertSkale(b *testing.B) {
+	b.StopTimer()
+	insertP := rand.Perm(benchmarkHeapSize)
+
+	h := NewOrdered[int]()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		for _, item := range insertP {
+			h.Push(item)
+		}
+	}
+}
+
+func BenchmarkHeapPop(b *testing.B) {
+	const n = 10000
+
+	b.StopTimer()
+	insertP := rand.Perm(n)
+
+	//h := &IntHeap{}
+	h0 := make(IntHeap, 0, n)
+	h := &h0
+	heap.Init(h)
+
+	j := 0
+	for _, item := range insertP {
+		heap.Push(h, item)
+		j++
+	}
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+
+		for h.Len() > 0 {
+			heap.Pop(h)
+		}
+	}
+
+}
+
+func BenchmarkHeapPopSkale(b *testing.B) {
+	const n = 10000
+
+	b.StopTimer()
+	insertP := rand.Perm(n)
+
+	//h := &IntHeap{}
+	h := NewOrdered[int](n)
+
+	j := 0
+	for _, item := range insertP {
+		h.Push(item)
+		j++
+	}
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+
+		for h.Len() > 0 {
+			h.Pop()
+		}
+	}
+}
