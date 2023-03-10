@@ -118,17 +118,17 @@ func (h *LHeap[T]) deleteMin() (_ T, _ bool) {
 	return min, true
 }
 
-// Insert inserts a value into the heap.
+// Push inserts a value into the heap.
 // Panics if `h` is nil.
 // Time complexity: O(log(n))
-func (h *LHeap[T]) Insert(v T) {
+func (h *LHeap[T]) Push(v T) {
 	h.insert(v)
 }
 
-// InsertBulk inserts multiple values into the heap.
+// PushBulk inserts multiple values into the heap.
 // Panics if `h` is nil.
 // Time complexity: O(n log(n))
-func (h *LHeap[T]) InsertBulk(vs ...T) {
+func (h *LHeap[T]) PushBulk(vs ...T) {
 	for _, v := range vs {
 		h.insert(v)
 	}
@@ -141,17 +141,17 @@ func (h *LHeap[T]) IsEmpty() bool {
 	return h.isEmpty()
 }
 
-// FindMin returns the minimum value in the heap. If the heap is empty, it returns the zero value of the type.
+// Peek returns the minimum value in the heap according to h.less. If the heap is empty, it returns the zero value of the type.
 // Panics if `h` is nil.
 // Time complexity: O(1)
-func (h *LHeap[T]) FindMin() T {
+func (h *LHeap[T]) Peek() T {
 	return h.findMin()
 }
 
-// DeleteMin deletes the minimum value in the heap and returns it. If the heap is empty, (zero value, false) is returned.
+// Pop deletes the minimum value in the heap according to h.less and returns it. If the heap is empty, (zero value, false) is returned.
 // Panics if `h` is nil.
 // Time complexity: O(log n)
-func (h *LHeap[T]) DeleteMin() (_ T, _ bool) {
+func (h *LHeap[T]) Pop() (_ T, _ bool) {
 	return h.deleteMin()
 }
 

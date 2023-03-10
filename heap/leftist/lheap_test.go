@@ -29,7 +29,7 @@ func treeItems[T any](n *Node[T]) []T {
 func TestLHeap(t *testing.T) {
 	h := NewOrdered[int]()
 
-	h.Insert(1)
+	h.Push(1)
 
 	if h.root.Value != 1 {
 		t.Errorf("root value is %d, want 1", h.root.Value)
@@ -39,7 +39,7 @@ func TestLHeap(t *testing.T) {
 		t.Errorf("heap length is %d, want 1", h.Len())
 	}
 
-	h.Insert(2)
+	h.Push(2)
 
 	if h.Len() != 2 {
 		t.Errorf("heap length is %d, want 2", h.Len())
@@ -57,7 +57,7 @@ func TestLHeap(t *testing.T) {
 	// test insertion steps
 
 	// 50
-	h.Insert(50)
+	h.Push(50)
 
 	if h.root.Value != 50 || h.root.npl != 0 {
 		t.Errorf("root value is incorrect, want 50 , 0 but got %v %v", h.root.Value, h.root.npl)
@@ -67,7 +67,7 @@ func TestLHeap(t *testing.T) {
 	// First, insert as far right as possible, then swing left. Result
 	//			50
 	//    75
-	h.Insert(75)
+	h.Push(75)
 
 	if h.root.left == nil || h.root.left.Value != 75 || h.root.left.npl != 0 {
 		t.Errorf("root.left value is %d, want 75", h.root.left.Value)
@@ -83,7 +83,7 @@ func TestLHeap(t *testing.T) {
 	//		  25
 	//    	50
 	//    75
-	h.Insert(25)
+	h.Push(25)
 
 	if h.root.Value != 25 || h.root.npl != 0 {
 		t.Errorf("root value is incorrect, want 25 , 0 but got %v %v", h.root.Value, h.root.npl)
@@ -102,7 +102,7 @@ func TestLHeap(t *testing.T) {
 	//		  25
 	//    	50	55
 	//    75
-	h.Insert(55)
+	h.Push(55)
 
 	if h.root.Value != 25 || h.root.npl != 1 {
 		t.Errorf("root value is incorrect, want 25 , 1 but got %v %v", h.root.Value, h.root.npl)
@@ -126,7 +126,7 @@ func TestLHeap(t *testing.T) {
 	//    	  50   40
 	//       /     /
 	//      75	  55
-	h.Insert(40)
+	h.Push(40)
 
 	if h.root.Value != 25 || h.root.npl != 1 {
 		t.Errorf("root value is incorrect, want 25 , 1 but got %v %v", h.root.Value, h.root.npl)
@@ -155,7 +155,7 @@ func TestLHeap(t *testing.T) {
 	//       /     / \				  / \   /
 	//      75	  55 65				 55 65 75
 
-	h.Insert(65)
+	h.Push(65)
 
 	if h.root.Value != 25 || h.root.npl != 1 {
 		t.Errorf("root value is incorrect, want 25 , 1 but got %v %v", h.root.Value, h.root.npl)
@@ -183,7 +183,7 @@ func TestLHeap(t *testing.T) {
 
 	h = NewOrdered[int]()
 
-	h.InsertBulk(21, 14, 17, 10, 3, 23, 26, 8)
+	h.PushBulk(21, 14, 17, 10, 3, 23, 26, 8)
 
 	items := treeItems(h.root)
 	if !slices.Equal(items, []int{21, 14, 17, 10, 3, 26, 23, 8}) {
@@ -203,7 +203,7 @@ func TestIsEmpty(t *testing.T) {
 		t.Errorf("heap should be empty")
 	}
 
-	h.Insert(1)
+	h.Push(1)
 
 	if h.IsEmpty() {
 		t.Errorf("heap should not be empty")
@@ -214,7 +214,7 @@ func TestMerge(t *testing.T) {
 
 	h1 := NewOrdered[int]()
 
-	h1.InsertBulk(10, 5, 15, 1, 50, 20, 99, 7, 25)
+	h1.PushBulk(10, 5, 15, 1, 50, 20, 99, 7, 25)
 	items := treeItems(h1.root)
 
 	if !slices.Equal(items, []int{10, 5, 15, 1, 50, 20, 99, 7, 25}) {
@@ -222,7 +222,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	h2 := NewOrdered[int]()
-	h2.InsertBulk(75, 22)
+	h2.PushBulk(75, 22)
 
 	items = treeItems(h2.root)
 
@@ -243,17 +243,17 @@ func TestMerge(t *testing.T) {
 
 }
 
-func TestDeleteMin(t *testing.T) {
+func TestPop(t *testing.T) {
 
 	h := NewOrdered[int]()
 
-	h.InsertBulk(14, 8, 23, 3, 21, 10, 26, 17)
+	h.PushBulk(14, 8, 23, 3, 21, 10, 26, 17)
 
 	var popItems []int
 
 	//use Len as a exit condition to test h.Len()
 	for h.Len() > 0 {
-		item, found := h.DeleteMin()
+		item, found := h.Pop()
 		if !found {
 			t.Errorf("error: item not found")
 		}
@@ -276,7 +276,7 @@ func BenchmarkLHeapInsert(b *testing.B) {
 	for i < b.N {
 		h := NewOrdered[int]()
 		for _, item := range insertP {
-			h.Insert(item)
+			h.Push(item)
 			i++
 			if i >= b.N {
 				return
@@ -285,7 +285,7 @@ func BenchmarkLHeapInsert(b *testing.B) {
 	}
 }
 
-func BenchmarkLHeapDeleteMin(b *testing.B) {
+func BenchmarkLHeapPop(b *testing.B) {
 	b.StopTimer()
 	insertP := rand.Perm(benchmarkHeapSize)
 	//removeP := rand.Perm(benchmarkHeapSize)
@@ -295,11 +295,11 @@ func BenchmarkLHeapDeleteMin(b *testing.B) {
 		b.StopTimer()
 		h := NewOrdered[int]()
 		for _, v := range insertP {
-			h.Insert(v)
+			h.Push(v)
 		}
 		b.StartTimer()
 		for range insertP {
-			h.DeleteMin()
+			h.Pop()
 			i++
 			if i >= b.N {
 				return
