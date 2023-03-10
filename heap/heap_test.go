@@ -288,8 +288,11 @@ func BenchmarkHeapInsertSkale(b *testing.B) {
 	}
 }
 
+var benchMarkPopGResult []any
+
 func BenchmarkHeapPop(b *testing.B) {
 	const n = 10000
+	var result []any
 
 	b.StopTimer()
 	insertP := rand.Perm(n)
@@ -309,14 +312,20 @@ func BenchmarkHeapPop(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 
 		for h.Len() > 0 {
-			heap.Pop(h)
+			a := heap.Pop(h)
+			result = append(result, a)
 		}
 	}
 
+	benchMarkPopGResult = result
+
 }
+
+var benchMarkPopSkaleResult []int
 
 func BenchmarkHeapPopSkale(b *testing.B) {
 	const n = 10000
+	var result []int
 
 	b.StopTimer()
 	insertP := rand.Perm(n)
@@ -334,7 +343,9 @@ func BenchmarkHeapPopSkale(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 
 		for h.Len() > 0 {
-			h.Pop()
+			a, _ := h.Pop()
+			result = append(result, a)
 		}
 	}
+	benchMarkPopSkaleResult = result
 }

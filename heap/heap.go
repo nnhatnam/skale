@@ -22,13 +22,14 @@ func NewOrdered[T skale.Ordered](size ...int) *Heap[T] {
 }
 
 func From[T any](less skale.LessFunc[T], e []T) *Heap[T] {
+	n := len(e)
 	h := New[T](less)
-	h.e = make([]T, len(e))
+	h.e = make([]T, n)
 
 	copy(h.e, e)
 
-	for i := len(h.e)/2 - 1; i >= 0; i-- {
-		h.down(i)
+	for i := n/2 - 1; i >= 0; i-- {
+		h.down(i, n)
 	}
 	return h
 }
@@ -40,7 +41,7 @@ func FromOrdered[T skale.Ordered](e []T) *Heap[T] {
 // heapify
 func (h *Heap[T]) Init(e []T) {
 	for i := len(e)/2 - 1; i >= 0; i-- {
-		h.down(i)
+		h.down(i, len(e))
 	}
 }
 
@@ -61,21 +62,23 @@ func (h *Heap[T]) up(i int) {
 }
 
 // sift-down procedure, O(log n). `i` is the index of the node to be sifted down.
-func (h *Heap[T]) down(i int) {
+// i : the index of the node to be sifted down
+// n : the length of the heap
+func (h *Heap[T]) down(i int, n int) {
 	//current: e[i]
 	//left: e[2i+1]
 	//right: e[2i+2]
 	//parent: e[(i-1)/2]
 
-	last := len(h.e) - 1
-	p := (last - 1) >> 1 // last internal node
+	for {
 
-	for i <= p { // p is the last internal node, so it's always have at least one child.
+		j := i<<1 + 1 // i : parent, j : left child
 
-		j := i<<1 + 1 // left won't overflow, but right might overflow
-		r := j + 1
+		if j >= n || j < 0 { // j < 0 is to avoid overflow
+			break
+		}
 
-		if r <= last && r > 0 && h.less(h.e[r], h.e[j]) { // r > 0 is to avoid overflow
+		if r := j + 1; r < n && h.less(h.e[r], h.e[j]) { // r won't overflow, because j < n => j + 1 <= n
 			j = r
 		}
 
@@ -96,7 +99,7 @@ func (h *Heap[T]) Push(v T) {
 
 func (h *Heap[T]) Pop() (_ T, _ bool) {
 
-	//var zero T
+	var zero T
 
 	n := len(h.e) - 1
 
@@ -104,10 +107,10 @@ func (h *Heap[T]) Pop() (_ T, _ bool) {
 
 	//delete
 	h.e[0] = h.e[n]
-	//h.e[n] = zero //clear the last element
+	h.e[n] = zero //clear the last element
 	h.e = h.e[:n]
 
-	h.down(0)
+	h.down(0, n)
 	return v, true
 }
 
@@ -125,7 +128,7 @@ func (h *Heap[T]) Remove(i int) (_ T, _ bool) {
 	h.e[n] = zero //clear the last element
 
 	h.e = h.e[:n]
-	h.down(i)
+	h.down(i, n)
 
 	return v, true
 }
