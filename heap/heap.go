@@ -4,6 +4,10 @@ import (
 	"github.com/nnhatnam/skale"
 )
 
+var (
+	_ IHeap[any] = (*Heap[any])(nil)
+)
+
 type Heap[T any] struct {
 	e    []T
 	less skale.LessFunc[T]
@@ -135,4 +139,11 @@ func (h *Heap[T]) Remove(i int) (_ T, _ bool) {
 
 func (h *Heap[T]) Len() int {
 	return len(h.e)
+}
+
+func (h *Heap[T]) Peek() (_ T, _ bool) {
+	if len(h.e) == 0 {
+		return
+	}
+	return h.e[0], true
 }
