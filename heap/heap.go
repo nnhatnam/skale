@@ -42,13 +42,6 @@ func FromOrdered[T skale.Ordered](e []T) *Heap[T] {
 	return From[T](skale.Less[T](), e)
 }
 
-// heapify
-func (h *Heap[T]) Init(e []T) {
-	for i := len(e)/2 - 1; i >= 0; i-- {
-		h.down(i, len(e))
-	}
-}
-
 func (h *Heap[T]) up(i int) {
 
 	for i > 0 {

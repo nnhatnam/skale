@@ -184,3 +184,9 @@ func (h *SkewHeap[T]) deleteMin() T {
 	h.root = h3
 	return y1.value
 }
+
+// Push inserts a value into the heap.
+// Panics if `h` is nil.
+func (h *SkewHeap[T]) Push(v T) {
+	h.insert(v)
+}
