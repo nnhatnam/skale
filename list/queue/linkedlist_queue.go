@@ -5,58 +5,61 @@ import (
 )
 
 var (
-	_ Queue[any] = (*LLQueue[any])(nil)
+	_ Queue[any] = (*QueueL[any])(nil)
 )
 
-type LLQueue[T any] struct {
-	e *linkedlist.List[T]
+type QueueL[T any] linkedlist.List[T]
+
+// NewQueueL returns a new QueueL[T]
+func NewQueueL[T any]() *QueueL[T] {
+	l := linkedlist.New[T]()
+	return (*QueueL[T])(l)
 }
 
-func LLQueueFrom[T any](l *linkedlist.List[T]) *LLQueue[T] {
-	return &LLQueue[T]{e: l}
+// Len returns the number of elements in the queue.
+func (q *QueueL[T]) Len() int {
+	return (*linkedlist.List[T])(q).Len()
 }
 
-func NewLLQueue[T any]() *LLQueue[T] {
-	return &LLQueue[T]{e: linkedlist.New[T]()}
+// Enqueue adds an element to the queue.
+func (q *QueueL[T]) Enqueue(value T) {
+	(*linkedlist.List[T])(q).PushBack(value)
 }
 
-func (s *LLQueue[T]) Len() int {
-	return s.e.Len()
-}
-
-func (s *LLQueue[T]) Enqueue(value T) {
-	s.e.PushBack(value)
-}
-
-func (s *LLQueue[T]) Dequeue() (_ T, _ bool) {
+// Dequeue removes an element from the queue.
+func (q *QueueL[T]) Dequeue() (_ T, _ bool) {
 	var zero T
-	n := s.e.PopFront()
+	n := (*linkedlist.List[T])(q).PopFront()
 	if n == nil {
 		return zero, false
 	}
 	return n.Value, true
 }
 
-func (s *LLQueue[T]) Peek() (_ T, _ bool) {
+// Peek returns the first element of the queue.
+func (q *QueueL[T]) Peek() (_ T, _ bool) {
 	var zero T
-	n := s.e.Front()
+	n := (*linkedlist.List[T])(q).Front()
 	if n == nil {
 		return zero, false
 	}
 	return n.Value, true
 }
 
-func (s *LLQueue[T]) Empty() bool {
-	return s.e.Len() == 0
+// Empty returns true if the queue is empty.
+func (q *QueueL[T]) Empty() bool {
+	return q.Len() == 0
 }
 
-func (s *LLQueue[T]) Clear() {
-	s.e.Init()
+// Clear clears the queue.
+func (q *QueueL[T]) Clear() {
+	(*linkedlist.List[T])(q).Init()
 }
 
-func (s *LLQueue[T]) ToSlice() []T {
+// ToSlice returns the underlying slice.
+func (q *QueueL[T]) ToSlice() []T {
 	var arr []T
-	c := s.e.Cursor()
+	c := (*linkedlist.List[T])(q).Cursor()
 
 	c.WalkAscending(func(n *linkedlist.Node[T]) bool {
 		arr = append(arr, n.Value)

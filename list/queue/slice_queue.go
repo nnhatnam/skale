@@ -1,68 +1,81 @@
 package queue
 
-var _ Queue[any] = (*SQueue[any])(nil)
+var _ Queue[any] = (*QueueS[any])(nil)
 
-type SQueue[T any] struct {
-	e []T
+// QueueS is a queue implemented using a slice. QueueS[T] is a type alias of []T.
+// So one can easily convert back and forth between QueueS[T] and []T.
+// For example:
+// var a = []int{1, 2, 3}
+// q := QueueS[int](a)
+// a = []int(q)
+type QueueS[T any] []T
+
+// NewQueueSWithSize creates a new queue with given size
+func NewQueueSWithSize[T any](size int) *QueueS[T] {
+	var q QueueS[T] = make([]T, 0, size)
+	return &q
 }
 
-func SQueueFrom[T any](l []T) *SQueue[T] {
-	return &SQueue[T]{e: l}
+// NewQueueS creates a new queue
+func NewQueueS[T any]() *QueueS[T] {
+	return NewQueueSWithSize[T](0)
 }
 
-func NewSQueue[T any]() *SQueue[T] {
-	return &SQueue[T]{e: make([]T, 0)}
+// Len returns the length of the queue
+func (s *QueueS[T]) Len() int {
+	return len(*s)
 }
 
-func (s *SQueue[T]) Len() int {
-	return len(s.e)
+// Enqueue adds an element to the queue
+func (s *QueueS[T]) Enqueue(value T) {
+	*s = append(*s, value)
 }
 
-func (s *SQueue[T]) Enqueue(value T) {
-	s.e = append(s.e, value)
-}
-
-func (s *SQueue[T]) Dequeue() (_ T, _ bool) {
+// Dequeue removes an element from the queue
+func (s *QueueS[T]) Dequeue() (_ T, _ bool) {
 	var zero T
-	if len(s.e) == 0 {
+	if len(*s) == 0 {
 		return zero, false
 	}
-	v := s.e[0]
-	s.e = s.e[1:]
+	v := (*s)[0]
+	*s = (*s)[1:]
 	return v, true
 }
 
-func (s *SQueue[T]) Peek() (_ T, _ bool) {
+// Peek returns the first element of the queue
+func (s *QueueS[T]) Peek() (_ T, _ bool) {
 	var zero T
-	if len(s.e) == 0 {
+	if len(*s) == 0 {
 		return zero, false
 	}
-	return s.e[0], true
+	return (*s)[0], true
 }
 
-func (s *SQueue[T]) Empty() bool {
-	return len(s.e) == 0
+// Empty returns true if the queue is empty
+func (s *QueueS[T]) Empty() bool {
+	return len(*s) == 0
 }
 
-func (s *SQueue[T]) Clear() {
-	s.e = make([]T, 0)
+// Clear clears the queue
+func (s *QueueS[T]) Clear() {
+	*s = make([]T, 0)
 }
 
-func (s *SQueue[T]) ToSlice() []T {
-	return s.e
+// ToSlice returns the underlying slice
+func (s *QueueS[T]) ToSlice() []T {
+	return *s
 }
 
 // Shrink copies the underlying slice with excess capacity to precisely sized one to avoid wasting memory.
 // It should be called on queue with long static durations.
 // Long-lived slices can waste memory on unused capacity, shrink them
-func (s *SQueue[T]) Shrink() {
+func (s *QueueS[T]) Shrink() {
 	//credit from https://about.sourcegraph.com/blog/zoekt-memory-optimizations-for-sourcegraph-cloud
-	if cap(s.e)-len(s.e) < 32 {
+	if cap(*s)-len(*s) < 32 {
 		return
 	}
 
-	out := make([]T, len(s.e))
-	copy(out, s.e)
-	s.e = out
-
+	out := make([]T, len(*s))
+	copy(out, *s)
+	*s = out
 }

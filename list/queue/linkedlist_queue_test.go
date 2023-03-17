@@ -8,7 +8,7 @@ import (
 // test cases from github.com/emirpasic/gods
 
 func TestQueueEnqueue(t *testing.T) {
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	if actualValue := queue.Empty(); actualValue != true {
 		t.Errorf("Got %v expected %v", actualValue, true)
 	}
@@ -31,7 +31,7 @@ func TestQueueEnqueue(t *testing.T) {
 }
 
 func TestQueuePeek(t *testing.T) {
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	if actualValue, ok := queue.Peek(); actualValue != 0 || ok {
 		t.Errorf("Got %v expected %v", actualValue, nil)
 	}
@@ -44,7 +44,7 @@ func TestQueuePeek(t *testing.T) {
 }
 
 func TestQueueDequeue(t *testing.T) {
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	queue.Enqueue(1)
 	queue.Enqueue(2)
 	queue.Enqueue(3)
@@ -88,7 +88,7 @@ func benchmarkDequeue(b *testing.B, queue Queue[int], size int) {
 func BenchmarkArrayQueueDequeue100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -99,7 +99,7 @@ func BenchmarkArrayQueueDequeue100(b *testing.B) {
 func BenchmarkArrayQueueDequeue1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -110,7 +110,7 @@ func BenchmarkArrayQueueDequeue1000(b *testing.B) {
 func BenchmarkArrayQueueDequeue10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -121,7 +121,7 @@ func BenchmarkArrayQueueDequeue10000(b *testing.B) {
 func BenchmarkArrayQueueDequeue100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -132,7 +132,7 @@ func BenchmarkArrayQueueDequeue100000(b *testing.B) {
 func BenchmarkArrayQueueEnqueue100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	b.StartTimer()
 	benchmarkEnqueue(b, queue, size)
 }
@@ -140,7 +140,7 @@ func BenchmarkArrayQueueEnqueue100(b *testing.B) {
 func BenchmarkArrayQueueEnqueue1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -151,7 +151,7 @@ func BenchmarkArrayQueueEnqueue1000(b *testing.B) {
 func BenchmarkArrayQueueEnqueue10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
@@ -162,7 +162,7 @@ func BenchmarkArrayQueueEnqueue10000(b *testing.B) {
 func BenchmarkArrayQueueEnqueue100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	queue := NewLLQueue[int]()
+	queue := NewQueueL[int]()
 	for n := 0; n < size; n++ {
 		queue.Enqueue(n)
 	}
