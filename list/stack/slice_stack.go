@@ -1,59 +1,81 @@
 package stack
 
 var (
-	_ Stack[any] = (*SStack[any])(nil)
+	_ Stack[any] = (*StackS[any])(nil)
 )
 
-type SStack[T any] struct {
-	e []T
+// StackS is a stack implemented using slice. StackS[T] is literally []T.
+// So one can easily convert back and forth between StackS[T] and []T.
+// For example:
+// var a = []int{1, 2, 3}
+// s := StackS[int](a)
+// a = []int(s)
+type StackS[T any] []T
+
+// NewStackSWithSize creates a new stack with given size
+func NewStackSWithSize[T any](size int) *StackS[T] {
+	var s StackS[T]
+	s = make([]T, 0, size)
+	return &s
 }
 
-func SStackFrom[T any](s []T) *SStack[T] {
-	return &SStack[T]{e: s}
+// NewStackS creates a new stack
+func NewStackS[T any]() *StackS[T] {
+	return NewStackSWithSize[T](0)
 }
 
-func NewSStack[T any]() *SStack[T] {
-	return &SStack[T]{e: make([]T, 0)}
+// Empty returns true if the stack is empty
+func (s *StackS[T]) Empty() bool {
+	return len(*s) == 0
 }
 
-func (s *SStack[T]) Empty() bool {
-	return len(s.e) == 0
-}
+// Top returns the top element of the stack
+func (s *StackS[T]) Top() (_ T, _ bool) {
 
-func (s *SStack[T]) Top() (_ T, _ bool) {
-	if len(s.e) == 0 {
+	if len(*s) == 0 {
 		return
 	}
-	return s.e[len(s.e)-1], true
+
+	return (*s)[len(*s)-1], true
 }
 
-func (s *SStack[T]) Len() int {
-	return len(s.e)
+// Len returns the length of the stack
+func (s *StackS[T]) Len() int {
+	return len(*s)
 }
 
-func (s *SStack[T]) Push(v T) {
-	s.e = append(s.e, v)
+// Push adds an element to the stack
+func (s *StackS[T]) Push(v T) {
+	*s = append(*s, v)
 }
 
-func (s *SStack[T]) Pop() (_ T, _ bool) {
-	if len(s.e) == 0 {
+// Pop removes an element from the stack
+func (s *StackS[T]) Pop() (_ T, _ bool) {
+	if len(*s) == 0 {
 		return
 	}
 	var zero T
-	x := s.e[len(s.e)-1]
-	s.e[len(s.e)-1] = zero // clear reference
-	s.e = s.e[:len(s.e)-1]
+	n := len(*s) - 1
+	x := (*s)[n]
+	(*s)[n] = zero // clear reference
+	*s = (*s)[:n]
 	return x, true
+
 }
 
-func (s *SStack[T]) Clear() {
-	s.e = nil
+// Clear clears the stack
+func (s *StackS[T]) Clear() {
+	*s = (*s)[:0]
 }
 
-func (s *SStack[T]) ToSlice() []T {
-	arr := make([]T, len(s.e))
-	for i, j := 0, len(s.e)-1; j >= 0; i, j = i+1, j-1 {
-		arr[i] = s.e[j]
+// ToSlice returns the slice of the stack
+func (s *StackS[T]) ToSlice() []T {
+
+	arr := make([]T, len(*s))
+
+	//reverse the slice
+	for i, j := 0, len(*s)-1; j >= 0; i, j = i+1, j-1 {
+		arr[i] = (*s)[j]
 	}
 
 	return arr
@@ -62,14 +84,15 @@ func (s *SStack[T]) ToSlice() []T {
 // Shrink copies the underlying slice with excess capacity to precisely sized one to avoid wasting memory.
 // It should be called on stack with long static durations.
 // Long-lived slices can waste memory on unused capacity, shrink them
-func (s *SStack[T]) Shrink() {
+func (s *StackS[T]) Shrink() {
 	//credit from https://about.sourcegraph.com/blog/zoekt-memory-optimizations-for-sourcegraph-cloud
-	if cap(s.e)-len(s.e) < 32 {
+
+	if cap(*s)-len(*s) < 32 {
 		return
 	}
 
-	out := make([]T, len(s.e))
-	copy(out, s.e)
-	s.e = out
+	out := make([]T, len(*s))
+	copy(out, *s)
+	*s = out
 
 }

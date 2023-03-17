@@ -8,7 +8,7 @@ import (
 //test cases from https://github.com/emirpasic/gods
 
 func TestStackInsertAfterClear(t *testing.T) {
-	var stack = NewSStack[int]()
+	var stack = NewStackS[int]()
 	stack.Push(1)
 	stack.Push(2)
 	stack.Push(3)
@@ -40,7 +40,7 @@ func TestStackInsertAfterClear(t *testing.T) {
 }
 
 func TestStackPush(t *testing.T) {
-	var stack = NewSStack[int]()
+	var stack = NewStackS[int]()
 
 	if actualValue := stack.Empty(); actualValue != true {
 		t.Errorf("Got %v expected %v", actualValue, true)
@@ -64,7 +64,7 @@ func TestStackPush(t *testing.T) {
 }
 
 func TestStackPeek(t *testing.T) {
-	var stack = NewSStack[int]()
+	var stack = NewStackS[int]()
 	if actualValue, ok := stack.Top(); actualValue != 0 || ok {
 		t.Errorf("Got %v expected %v", actualValue, nil)
 	}
@@ -77,7 +77,7 @@ func TestStackPeek(t *testing.T) {
 }
 
 func TestStackPop(t *testing.T) {
-	var stack = NewSStack[int]()
+	var stack = NewStackS[int]()
 	stack.Push(1)
 	stack.Push(2)
 	stack.Push(3)
@@ -118,10 +118,10 @@ func benchmarkPop(b *testing.B, stack Stack[int], size int) {
 	}
 }
 
-func BenchmarkSStackPop100(b *testing.B) {
+func BenchmarkStackSPop100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -129,10 +129,10 @@ func BenchmarkSStackPop100(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkSStackPop1000(b *testing.B) {
+func BenchmarkStackSPop1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -140,10 +140,10 @@ func BenchmarkSStackPop1000(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkSStackPop10000(b *testing.B) {
+func BenchmarkStackSPop10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -151,10 +151,10 @@ func BenchmarkSStackPop10000(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkSStackPop100000(b *testing.B) {
+func BenchmarkStackSPop100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -162,18 +162,18 @@ func BenchmarkSStackPop100000(b *testing.B) {
 	benchmarkPop(b, stack, size)
 }
 
-func BenchmarkSStackPush100(b *testing.B) {
+func BenchmarkStackSPush100(b *testing.B) {
 	b.StopTimer()
 	size := 100
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	b.StartTimer()
 	benchmarkPush(b, stack, size)
 }
 
-func BenchmarkSStackPush1000(b *testing.B) {
+func BenchmarkStackSPush1000(b *testing.B) {
 	b.StopTimer()
 	size := 1000
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -181,10 +181,10 @@ func BenchmarkSStackPush1000(b *testing.B) {
 	benchmarkPush(b, stack, size)
 }
 
-func BenchmarkSStackPush10000(b *testing.B) {
+func BenchmarkStackSPush10000(b *testing.B) {
 	b.StopTimer()
 	size := 10000
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
@@ -192,10 +192,10 @@ func BenchmarkSStackPush10000(b *testing.B) {
 	benchmarkPush(b, stack, size)
 }
 
-func BenchmarkSStackPush100000(b *testing.B) {
+func BenchmarkStackSPush100000(b *testing.B) {
 	b.StopTimer()
 	size := 100000
-	stack := NewSStack[int]()
+	stack := NewStackS[int]()
 	for n := 0; n < size; n++ {
 		stack.Push(n)
 	}
