@@ -28,7 +28,7 @@ func TestStackLPush(t *testing.T) {
 	}
 }
 
-func TestStackLPeek(t *testing.T) {
+func TestStackLTop(t *testing.T) {
 	stack := NewStackL[int]()
 	if actualValue, ok := stack.Top(); actualValue != 0 || ok {
 		t.Errorf("Got %v expected %v", actualValue, nil)
@@ -38,6 +38,19 @@ func TestStackLPeek(t *testing.T) {
 	stack.Push(3)
 	if actualValue, ok := stack.Top(); actualValue != 3 || !ok {
 		t.Errorf("Got %v expected %v", actualValue, 3)
+	}
+}
+
+func TestStackBottom(t *testing.T) {
+	stack := NewStackL[int]()
+	if actualValue, ok := stack.Bottom(); actualValue != 0 || ok {
+		t.Errorf("Got %v expected %v", actualValue, nil)
+	}
+	stack.Push(1)
+	stack.Push(2)
+	stack.Push(3)
+	if actualValue, ok := stack.Bottom(); actualValue != 1 || !ok {
+		t.Errorf("Got %v expected %v", actualValue, 1)
 	}
 }
 

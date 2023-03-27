@@ -7,7 +7,7 @@ import (
 
 //test cases from https://github.com/emirpasic/gods
 
-func TestStackInsertAfterClear(t *testing.T) {
+func TestStackSInsertAfterClear(t *testing.T) {
 	var stack = NewStackS[int]()
 	stack.Push(1)
 	stack.Push(2)
@@ -39,7 +39,7 @@ func TestStackInsertAfterClear(t *testing.T) {
 	}
 }
 
-func TestStackPush(t *testing.T) {
+func TestStackSPush(t *testing.T) {
 	var stack = NewStackS[int]()
 
 	if actualValue := stack.Empty(); actualValue != true {
@@ -63,7 +63,7 @@ func TestStackPush(t *testing.T) {
 	}
 }
 
-func TestStackPeek(t *testing.T) {
+func TestStackSTop(t *testing.T) {
 	var stack = NewStackS[int]()
 	if actualValue, ok := stack.Top(); actualValue != 0 || ok {
 		t.Errorf("Got %v expected %v", actualValue, nil)
@@ -76,7 +76,20 @@ func TestStackPeek(t *testing.T) {
 	}
 }
 
-func TestStackPop(t *testing.T) {
+func TestStackSBottom(t *testing.T) {
+	var stack = NewStackS[int]()
+	if actualValue, ok := stack.Bottom(); actualValue != 0 || ok {
+		t.Errorf("Got %v expected %v", actualValue, nil)
+	}
+	stack.Push(1)
+	stack.Push(2)
+	stack.Push(3)
+	if actualValue, ok := stack.Bottom(); actualValue != 1 || !ok {
+		t.Errorf("Got %v expected %v", actualValue, 1)
+	}
+}
+
+func TestStackSPop(t *testing.T) {
 	var stack = NewStackS[int]()
 	stack.Push(1)
 	stack.Push(2)

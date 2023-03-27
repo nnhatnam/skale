@@ -39,6 +39,16 @@ func (s *StackS[T]) Top() (_ T, _ bool) {
 	return (*s)[len(*s)-1], true
 }
 
+// Bottom returns the bottom element of the stack
+func (s *StackS[T]) Bottom() (_ T, _ bool) {
+
+	if len(*s) == 0 {
+		return
+	}
+
+	return (*s)[0], true
+}
+
 // Len returns the length of the stack
 func (s *StackS[T]) Len() int {
 	return len(*s)

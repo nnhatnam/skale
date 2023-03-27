@@ -28,6 +28,17 @@ func (s *StackL[T]) Top() (_ T, _ bool) {
 	return n.Value, true
 }
 
+// Bottom returns the bottom element of the stack.
+func (s *StackL[T]) Bottom() (_ T, _ bool) {
+	var zero T
+
+	n := (*linkedlist.List[T])(s).Front()
+	if n == nil {
+		return zero, false
+	}
+	return n.Value, true
+}
+
 // Len returns the length of the stack.
 func (s *StackL[T]) Len() int {
 	return (*linkedlist.List[T])(s).Len()
