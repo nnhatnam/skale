@@ -93,6 +93,44 @@ func LongestPrefixIndex[T comparable](s1, s2 []T) (_ int) {
 	return -1 // no common prefix
 }
 
+// MismatchIndex returns the first index of mismatched value of s1 and s2.
+// MismatchIndex will assume that s1 and s2 have the same length.
+// If s1 and s2 have different length, it will conceptually pad the shorter slice with an imagination value that can't be matched.
+// With that logic, if s1 is a prefix of s2, returns len(s1).
+// If s1 and s2 have no mismatched value and len(s1) == len(s2), returns -1.
+func MismatchIndex[T comparable](s1, s2 []T) (_ int) {
+
+	var idx int
+	for idx = 0; idx < len(s1) && idx < len(s2); idx++ {
+		if s1[idx] != s2[idx] {
+			return idx
+		}
+	}
+
+	return -1 // no common prefix
+}
+
+func WalkParallel[E comparable](f func(i int) bool, s ...[][]E) int {
+
+	// find len of the shortest slice
+	var minLen int
+	for _, s1 := range s {
+		if len(s1) < minLen {
+			minLen = len(s1)
+		}
+	}
+
+	var i int
+	for i = 0; i < minLen; i++ {
+		if !f(i) {
+			return i
+		}
+	}
+
+	return i
+
+}
+
 // Reset modifies the slice s by setting all elements to zero value of type T from index i to j.
 func Reset[T any](s []T, i, j int) {
 	var zero T
@@ -100,28 +138,6 @@ func Reset[T any](s []T, i, j int) {
 		s[k] = zero
 	}
 }
-
-// Insert inserts the values v... into s at index i,
-// returning the modified slice.
-// In the returned slice r, r[i] == v[0].
-// Insert panics if i is out of range.
-// This function is O(len(s) + len(v)).
-// This is a temporary fix for golang.org/x/exp/slices#Insert
-// slices.Insert add extra `i` zero-value elements to the end of the slice causing the length to be longer than expected.
-//func Insert[S ~[]E, E any](s S, i int, v ...E) S {
-//	tot := len(s) + len(v) // 2 + 7 = 9
-//	if tot <= cap(s) {
-//		s2 := s[:tot]
-//		copy(s2[i+len(v):], s[i:])
-//		copy(s2[i:], v)
-//		return s2
-//	}
-//	s2 := make(S, len(v)+i) // <-- change to make(S, len(v)+i, tot)
-//	copy(s2, s[:i])
-//	copy(s2[i:], v)
-//	copy(s2[i+len(v):], s[i:])
-//	return s2
-//}
 
 // Walk walks through the slice s from position i until it finds the value v.
 // If v is found, returns the list of elements from i to the position of v.
