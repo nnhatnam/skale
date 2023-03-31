@@ -70,6 +70,43 @@ func TestNewRadixTrieMap(t *testing.T) {
 		t.Errorf("Got %v expected %v", r.Len(), len(inp))
 	}
 
+	//r.ReplaceOrInsert([]byte("romane"), 2)
+	//r.ReplaceOrInsert([]byte("romanus"), 3)
+	//r.ReplaceOrInsert([]byte("romulus"), 4)
+	//r.ReplaceOrInsert([]byte("rubens"), 5)
+	//r.ReplaceOrInsert([]byte("ruber"), 6)
+	//r.ReplaceOrInsert([]byte("rubicon"), 7)
+	//r.ReplaceOrInsert([]byte("rubicundus"), 8)
+	//r.ReplaceOrInsert([]byte("go"), 9)
+
+	r.AscendGreaterOrEqual([]byte(min), func(key []byte, value int) bool {
+
+		if string(key) > max {
+			t.Errorf("Got %v expected %v", string(key), max)
+		}
+		return false
+	})
+
+	for k, v := range inp {
+		out, ok := r.Get([]byte(k))
+		if !ok {
+			t.Fatalf("missing key: %v", k)
+		}
+		if out != v {
+			t.Fatalf("value mis-match: %v %v", out, v)
+		}
+	}
+
+	// Check min and max
+	outMin, _, _ := r.Min()
+	if string(outMin) != min {
+		t.Fatalf("bad minimum: %v %v", outMin, min)
+	}
+	outMax, _, _ := r.Max()
+	if string(outMax) != max {
+		t.Fatalf("bad maximum: %v %v", outMax, max)
+	}
+
 	//r.Insert([]byte("romane"), 2)
 	//fmt.Println("in order traverse: ", inOrderByteTraversal(r.root))
 	//

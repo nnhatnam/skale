@@ -1,7 +1,6 @@
 package radix
 
 import (
-	"fmt"
 	"github.com/nnhatnam/skale/exp/xslices"
 	"github.com/nnhatnam/skale/trie"
 	"golang.org/x/exp/slices"
@@ -212,100 +211,380 @@ func replaceOrInsert[K trie.Elem, V any](root *node[K, V], s []K, value V) (_ V,
 	return
 }
 
-func insert[K trie.Elem, V any](n *node[K, V], s []K, value V) {
-	// To be considered: this function may need to write in a way such that s will be garbage collected at the end of the function
-	// Due to the design of Go slice, the underline data of s may not release if we set trie's key reference to a slice of s
+func (t *RadixTrieMap[K, V]) ascendGreaterOrEqual(root *node[K, V], key []K, iterator ItemIterator[K, V]) bool {
 
-	if n == nil || len(s) == 0 {
-		//n = newInternalNode[K, V](s)
-		panic("n is nil")
-		return
+	if root == nil {
+		return true // stop
 	}
 
-	e := getEdgeByPrefix[K, V](n.edges, s[0])
+	//var ret []K
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+				//ret = append(ret, prefix...)
+			}
+
+		}
+
+		for _, e := range n.edges {
+
+			if len(prefix) >= len(key) || slices.Compare(e.label, key[len(prefix):]) >= 0 {
+				if inOrderRecursive(e.node, append(prefix, e.label...)) {
+					return true // stop
+				}
+			}
+			//inOrderRecursive(e.node, append(prefix, e.label...))
+		}
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+
+}
+
+func (t *RadixTrieMap[K, V]) ascendLessThan(root *node[K, V], key []K, iterator ItemIterator[K, V]) bool {
+
+	if root == nil {
+		return true // stop
+	}
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+			}
+
+		}
+
+		for _, e := range n.edges {
+
+			if len(prefix) >= len(key) || slices.Compare(e.label, key[len(prefix):]) >= 0 {
+				return false // stop
+			}
+
+			if inOrderRecursive(e.node, append(prefix, e.label...)) {
+				return true // stop
+			}
+
+		}
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+
+}
+
+func (t *RadixTrieMap[K, V]) ascendRange(root *node[K, V], greaterOrEqual []K, lessThan []K, iterator ItemIterator[K, V]) bool {
+	if root == nil {
+		return true // stop
+	}
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+			}
+
+		}
+
+		for _, e := range n.edges {
+
+			if len(prefix) >= len(lessThan) || slices.Compare(e.label, lessThan[len(prefix):]) >= 0 {
+				return true // stop
+			}
+
+			if len(prefix) >= len(greaterOrEqual) || slices.Compare(e.label, greaterOrEqual[len(prefix):]) >= 0 {
+				if inOrderRecursive(e.node, append(prefix, e.label...)) {
+					return true // stop
+				}
+			}
+			//inOrderRecursive(e.node, append(prefix, e.label...))
+		}
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+}
+
+func (t *RadixTrieMap[K, V]) ascend(root *node[K, V], iterator ItemIterator[K, V]) bool {
+	if root == nil {
+		return true // stop
+	}
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+			}
+
+		}
+
+		for _, e := range n.edges {
+
+			if inOrderRecursive(e.node, append(prefix, e.label...)) {
+				return true // stop
+			}
+		}
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+}
+
+func (t *RadixTrieMap[K, V]) descend(root *node[K, V], iterator ItemIterator[K, V]) bool {
+
+	if root == nil {
+		return true // stop
+	}
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+			}
+
+		}
+
+		for i := len(n.edges) - 1; i >= 0; i-- {
+
+			if inOrderRecursive(n.edges[i].node, append(prefix, n.edges[i].label...)) {
+				return true // stop
+			}
+		}
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+
+}
+
+func (t *RadixTrieMap[K, V]) descendRange(root *node[K, V], lessOrEqual []K, greaterThan []K, iterator ItemIterator[K, V]) bool {
+	if root == nil {
+		return true // stop
+	}
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		for _, e := range n.edges {
+
+			if len(prefix) > len(lessOrEqual) || slices.Compare(e.label, lessOrEqual[len(prefix):]) > 0 {
+				return true // stop
+			}
+
+			if len(prefix) > len(greaterThan) || slices.Compare(e.label, greaterThan[len(prefix):]) > 0 {
+				if inOrderRecursive(e.node, append(prefix, e.label...)) {
+					return true // stop
+				}
+			}
+			//inOrderRecursive(e.node, append(prefix, e.label...))
+		}
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+			}
+
+		}
+
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+}
+
+func (t *RadixTrieMap[K, V]) descendLessOrEqual(root *node[K, V], key []K, iterator ItemIterator[K, V]) bool {
+	if root == nil {
+		return true // stop
+	}
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		for _, e := range n.edges {
+
+			if len(prefix) > len(key) || slices.Compare(e.label, key[len(prefix):]) > 0 {
+				return false // stop
+			}
+
+			if inOrderRecursive(e.node, append(prefix, e.label...)) {
+				return true // stop
+			}
+
+		}
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+			}
+
+		}
+
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+}
+
+func (t *RadixTrieMap[K, V]) descendGreaterThan(root *node[K, V], key []K, iterator ItemIterator[K, V]) bool {
+	if root == nil {
+		return true // stop
+	}
+
+	//var ret []K
+
+	var inOrderRecursive func(n *node[K, V], prefix []K) bool // return true to stop
+
+	inOrderRecursive = func(n *node[K, V], prefix []K) bool {
+
+		for _, e := range n.edges {
+
+			if len(prefix) > len(key) || slices.Compare(e.label, key[len(prefix):]) > 0 {
+				if inOrderRecursive(e.node, append(prefix, e.label...)) {
+					return true // stop
+				}
+			}
+			//inOrderRecursive(e.node, append(prefix, e.label...))
+		}
+
+		if n.lastElem {
+			if iterator(prefix, n.value) {
+				return true // stop
+				//ret = append(ret, prefix...)
+			}
+
+		}
+
+		return false
+	}
+
+	return inOrderRecursive(root, []K{})
+}
+
+func (t *RadixTrieMap[K, V]) get(key []K) (_ V, _ bool) {
+
+	e, _, _, eIdx := walk[K, V](t.root, key)
 
 	if e == nil {
-		e1 := newEdge(xslices.SubClone(s, 0, len(s)), newLeafNode[K, V](value))
-		n.edges = setEdge(n.edges, e1)
-		return
-
-	}
-
-	if slices.Equal(e.label, s) {
-		// s is already in the trie
-		// update the value
-		e.node.value = value
 		return
 	}
 
-	splitIdx := xslices.MismatchIndex(s, e.label)
-	//var zero V
-
-	if splitIdx == -1 {
-		// no mismatch and len(s) == len(n.edges[idx].label)
-
-		e.node.value = value
-		return
-
-	} else if splitIdx == len(s) {
-		// s is a prefix of n.edges[idx].label => split the current edge at splitIdx.
-
-		e1 := newEdge(
-			xslices.SubClone(e.label, 0, splitIdx),
-			newLeafNode[K, V](value),
-		)
-
-		e.label = xslices.SubClone(e.label, splitIdx, len(e.label))
-
-		setEdge(n.edges, e1)
-		setEdge(e1.node.edges, e)
-		return
-	} else if splitIdx == len(e.label) {
-		// n.edges[idx].label is a prefix of s => add new edge after splitIdx.
-
-		e1 := newEdge(
-			xslices.SubClone(s, splitIdx, len(s)),
-			newLeafNode[K, V](value),
-		)
-
-		setEdge(e.node.edges, e1)
-
-		return
+	if eIdx == len(e.label)-1 {
+		return e.node.value, true
 	}
 
-	// split the current edge at splitIdx.
-
-	e1 := newEdge(
-		xslices.SubClone(e.label, 0, splitIdx),
-		newLeafNode[K, V](value),
-	)
-
-	e.label = xslices.SubClone(e.label, splitIdx, len(e.label))
-
-	e2 := newEdge(
-		xslices.SubClone(s, splitIdx, len(s)),
-		newLeafNode[K, V](value),
-	)
-
-	setEdge(n.edges, e1)
-	setEdge(e1.node.edges, e)
-	setEdge(e1.node.edges, e2)
 	return
 }
 
-func (t *RadixTrieMap[K, V]) insert(key []K, value V) {
-	var zero V
-	if t.root == nil {
+func (t *RadixTrieMap[K, V]) Min() (_ []K, _ V, _ bool) {
 
-		t.root = newNode[K, V](zero, false)
-
+	if t == nil || t.root == nil || t.len == 0 {
+		return
 	}
-	fmt.Println("toi day: ", key)
-	insert(t.root, key, value)
+
+	var key []K
+	var min V
+
+	t.Ascend(func(k []K, v V) bool {
+		key, min = k, v
+		return true
+	})
+
+	return key, min, true
+}
+
+func (t *RadixTrieMap[K, V]) Max() (_ []K, _ V, _ bool) {
+
+	if t == nil || t.root == nil || t.len == 0 {
+		return
+	}
+
+	var key []K
+	var max V
+
+	t.Descend(func(k []K, v V) bool {
+		key, max = k, v
+		return true
+	})
+
+	return key, max, true
+}
+
+func (t *RadixTrieMap[K, V]) Get(key []K) (_ V, _ bool) {
+
+	if t == nil || t.root == nil || t.len == 0 {
+		return
+	}
+
+	return t.get(key)
+}
+
+func (t *RadixTrieMap[K, V]) Descend(iterator ItemIterator[K, V]) {
+
+	t.descend(t.root, iterator)
+}
+
+func (t *RadixTrieMap[K, V]) DescendRange(start []K, end []K, iterator ItemIterator[K, V]) {
+
+	t.descendRange(t.root, start, end, iterator)
 
 }
 
-func (t *RadixTrieMap[K, V]) replaceOrInsert(key []K, value V) (_ V, _ bool) {
+func (t *RadixTrieMap[K, V]) DescendLessOrEqual(key []K, iterator ItemIterator[K, V]) {
+
+	t.descendLessOrEqual(t.root, key, iterator)
+
+}
+
+func (t *RadixTrieMap[K, V]) DescendGreaterThan(key []K, iterator ItemIterator[K, V]) {
+
+	t.descendGreaterThan(t.root, key, iterator)
+
+}
+
+func (t *RadixTrieMap[K, V]) Ascend(iterator ItemIterator[K, V]) {
+
+	t.ascend(t.root, iterator)
+
+}
+
+func (t *RadixTrieMap[K, V]) AscendRange(start []K, end []K, iterator ItemIterator[K, V]) {
+
+	t.ascendRange(t.root, start, end, iterator)
+
+}
+
+func (t *RadixTrieMap[K, V]) AscendLessThan(key []K, iterator ItemIterator[K, V]) {
+
+	t.ascendLessThan(t.root, key, iterator)
+}
+
+func (t *RadixTrieMap[K, V]) AscendGreaterOrEqual(key []K, iterator ItemIterator[K, V]) {
+
+	t.ascendGreaterOrEqual(t.root, key, iterator)
+
+}
+
+func (t *RadixTrieMap[K, V]) ReplaceOrInsert(key []K, value V) (_ V, _ bool) {
 	var zero V
 	if t.root == nil {
 
@@ -320,12 +599,6 @@ func (t *RadixTrieMap[K, V]) replaceOrInsert(key []K, value V) (_ V, _ bool) {
 
 	t.len++
 	return v, false
-
-}
-
-func (t *RadixTrieMap[K, V]) ReplaceOrInsert(key []K, value V) (_ V, _ bool) {
-
-	return t.replaceOrInsert(key, value)
 
 }
 
