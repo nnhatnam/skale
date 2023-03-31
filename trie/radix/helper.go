@@ -28,11 +28,16 @@ type edges[K trie.Elem, V any] []*edge[K, V]
 
 func getEdgeByPrefix[K trie.Elem, V any](m edges[K, V], prefix K) *edge[K, V] {
 	//binary search for key position in the map
+
+	if len(m) == 0 {
+		return nil
+	}
+
 	idx := sort.Search(len(m), func(i int) bool {
 		return m[i].label[0] >= prefix
 	})
 
-	if idx == -1 {
+	if idx >= len(m) {
 		return nil
 	}
 
@@ -45,11 +50,16 @@ func getEdgeByPrefix[K trie.Elem, V any](m edges[K, V], prefix K) *edge[K, V] {
 
 func setEdge[K trie.Elem, V any](m edges[K, V], e *edge[K, V]) edges[K, V] {
 	//binary search for key position in the map
+
+	if len(m) == 0 {
+		return append(m, e)
+	}
+
 	idx := sort.Search(len(m), func(i int) bool {
 		return (m)[i].label[0] >= e.label[0]
 	})
 
-	if idx == -1 {
+	if idx >= len(m) {
 		m = append(m, e)
 	} else if m[idx].label[0] != e.label[0] {
 		m = slices.Insert(m, idx, e)
