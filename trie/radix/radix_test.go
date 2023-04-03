@@ -3,6 +3,7 @@ package radix
 import (
 	crand "crypto/rand"
 	"fmt"
+	"golang.org/x/exp/slices"
 	"testing"
 )
 
@@ -21,16 +22,16 @@ func generateUUID() string {
 		buf[10:16])
 }
 
-func inOrderByteTraversal(n *node[byte, int]) []string {
+func inOrderByteTraversal[V any](n *node[byte, V]) []string {
 	if n == nil {
 		return nil
 	}
 
 	var ret []string
 
-	var inOrderRecursive func(n *node[byte, int], prefix []byte)
+	var inOrderRecursive func(n *node[byte, V], prefix []byte)
 
-	inOrderRecursive = func(n *node[byte, int], prefix []byte) {
+	inOrderRecursive = func(n *node[byte, V], prefix []byte) {
 
 		if n.lastElem {
 			ret = append(ret, string(prefix))
@@ -107,6 +108,19 @@ func TestNewRadixTrieMap(t *testing.T) {
 		t.Fatalf("bad maximum: %v %v", outMax, max)
 	}
 
+	for k, v := range inp {
+		out, ok := r.Delete([]byte(k))
+		if !ok {
+			t.Fatalf("missing key: %v", k)
+		}
+		if out != v {
+			t.Fatalf("value mis-match: %v %v", out, v)
+		}
+	}
+	if r.Len() != 0 {
+		t.Fatalf("bad length: %v", r.Len())
+	}
+
 	//r.Insert([]byte("romane"), 2)
 	//fmt.Println("in order traverse: ", inOrderByteTraversal(r.root))
 	//
@@ -118,4 +132,67 @@ func TestNewRadixTrieMap(t *testing.T) {
 	//	t.Errorf("Got %v expected %v", r.Len(), len(inp)+2)
 	//}
 
+}
+
+func TestEmptyKey(t *testing.T) {
+	r := NewRadixTrieMap[byte, bool]()
+
+	s := []string{"", "A", "AB"}
+
+	for _, ss := range s {
+		r.ReplaceOrInsert([]byte(ss), true)
+	}
+
+	inOrder := []string{}
+
+	r.AscendGreaterOrEqual([]byte(""), func(key []byte, value bool) bool {
+		inOrder = append(inOrder, string(key))
+		return false
+	})
+
+	if len(inOrder) != len(s) {
+		t.Fatalf("bad length: %v %v", len(inOrder), len(s))
+	}
+
+	if !slices.Equal(inOrder, s) {
+		t.Fatalf("bad order: %v %v", inOrder, s)
+	}
+
+	r1 := NewRadixTrieMap[byte, bool]()
+	_, ok := r1.Delete([]byte(""))
+	if ok {
+		t.Fatalf("bad")
+	}
+	_, ok = r1.ReplaceOrInsert([]byte(""), true)
+	if ok {
+		t.Fatalf("bad")
+	}
+	val, ok := r1.Get([]byte(""))
+	if !ok || val != true {
+		t.Fatalf("bad: %v", val)
+	}
+	val, ok = r1.Delete([]byte(""))
+	if !ok || val != true {
+		t.Fatalf("bad: %v", val)
+	}
+
+}
+
+func TestDelete(t *testing.T) {
+
+	r := NewRadixTrieMap[byte, bool]()
+
+	s := []string{"", "A", "AB"}
+
+	for _, ss := range s {
+		r.ReplaceOrInsert([]byte(ss), true)
+	}
+
+	for _, ss := range s {
+		_, ok := r.Delete([]byte(ss))
+
+		if !ok {
+			t.Fatalf("bad %q", ss)
+		}
+	}
 }
