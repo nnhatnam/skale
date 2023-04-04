@@ -93,6 +93,15 @@ func LongestPrefixIndex[T comparable](s1, s2 []T) (_ int) {
 	return -1 // no common prefix
 }
 
+func SubClone[T any](s []T, start, end int) []T {
+	if s == nil {
+		return nil
+	}
+	s1 := make([]T, end-start)
+	copy(s1, s[start:end])
+	return s1
+}
+
 // MismatchIndex returns the first index of mismatched value of s1 and s2.
 // MismatchIndex will assume that s1 and s2 have the same length.
 // If s1 and s2 have different length, it will conceptually pad the shorter slice with an imagination value that can't be matched.

@@ -29,7 +29,8 @@ func (s *StackS[T]) Empty() bool {
 	return len(*s) == 0
 }
 
-// Top returns the top element of the stack
+// Top returns the top element of the stack without removing it,
+// and a boolean indicating if there is an element
 func (s *StackS[T]) Top() (_ T, _ bool) {
 
 	if len(*s) == 0 {
@@ -37,6 +38,16 @@ func (s *StackS[T]) Top() (_ T, _ bool) {
 	}
 
 	return (*s)[len(*s)-1], true
+}
+
+// Peek simply returns the top element of the stack if there is one. Return zero-value if not.
+func (s *StackS[T]) Peek() (_ T) {
+
+	if len(*s) == 0 {
+		return
+	}
+
+	return (*s)[len(*s)-1]
 }
 
 // Bottom returns the bottom element of the stack
@@ -75,7 +86,8 @@ func (s *StackS[T]) Pop() (_ T, _ bool) {
 
 // Clear clears the stack
 func (s *StackS[T]) Clear() {
-	*s = (*s)[:0]
+	//clear the underlying slice
+	*s = make([]T, 0, cap(*s))
 }
 
 // ToSlice returns the slice of the stack
