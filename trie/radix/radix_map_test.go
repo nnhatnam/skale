@@ -47,10 +47,10 @@ func inOrderByteTraversal[V any](n *node[byte, V]) []string {
 	return ret
 }
 
-func TestNewRadixTrieMap(t *testing.T) {
+func TestNewRadixMap(t *testing.T) {
 	var min, max string
 	inp := make(map[string]int)
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000; i++ {
 		gen := generateUUID()
 		inp[gen] = i
 		if gen < min || i == 0 {
@@ -61,7 +61,7 @@ func TestNewRadixTrieMap(t *testing.T) {
 		}
 	}
 
-	r := NewRadixTrieMap[byte, int]()
+	r := NewRadixMap[byte, int]()
 
 	for k, v := range inp {
 		r.ReplaceOrInsert([]byte(k), v)
@@ -70,6 +70,20 @@ func TestNewRadixTrieMap(t *testing.T) {
 	if r.Len() != len(inp) {
 		t.Errorf("Got %v expected %v", r.Len(), len(inp))
 	}
+
+	//r.ReplaceOrInsert([]byte("97345125-20a0-5b2f-9862-532be5d3c122"), 0)
+	//r.ReplaceOrInsert([]byte("d504d04b-a917-e5dd-6fe0-fff347b6579a"), 1)
+	//r.ReplaceOrInsert([]byte("2a82a2af-9dd8-0b76-401f-073308564870"), 2)
+	//r.ReplaceOrInsert([]byte("d1c9f0ed-6d53-01ec-44ab-c080da791cc7"), 0)
+	//r.ReplaceOrInsert([]byte("50b0248c-4842-e2a2-9f18-21cbfde1e108"), 1)
+	//r.ReplaceOrInsert([]byte("7d3cb7a2-bdfb-e75f-b648-03397e5a959b"), 2)
+	//r.ReplaceOrInsert([]byte("80f413c3-2cf2-4477-2a94-af7446fd3f61"), 0)
+	//r.ReplaceOrInsert([]byte("c0ceb1ba-2927-a0d9-2f43-7e115dd74589"), 1)
+	//r.ReplaceOrInsert([]byte("7a5c4eec-18b9-c5e8-7a57-d909bb099875"), 2)
+	//r.ReplaceOrInsert([]byte("c0b0d9d2-1f6f-976b-5128-5f376f06dbe9"), 0)
+	//r.ReplaceOrInsert([]byte("04de4ece-63a7-5303-dbed-ff29392c6209"), 1)
+	//r.ReplaceOrInsert([]byte("3eedb740-3a93-9358-8ec5-23139d9eaeba"), 2)
+	//r.ReplaceOrInsert([]byte("7e0a1474-72d4-05c5-e338-36260d1c8716"), 2)
 
 	//r.ReplaceOrInsert([]byte("romane"), 2)
 	//r.ReplaceOrInsert([]byte("romanus"), 3)
@@ -81,7 +95,9 @@ func TestNewRadixTrieMap(t *testing.T) {
 	//r.ReplaceOrInsert([]byte("go"), 9)
 
 	r.AscendGreaterOrEqual([]byte(min), func(key []byte, value int) bool {
-
+		if string(key) < min {
+			t.Errorf("Got %v expected %v", string(key), min)
+		}
 		if string(key) > max {
 			t.Errorf("Got %v expected %v", string(key), max)
 		}
@@ -90,6 +106,7 @@ func TestNewRadixTrieMap(t *testing.T) {
 
 	for k, v := range inp {
 		out, ok := r.Get([]byte(k))
+
 		if !ok {
 			t.Fatalf("missing key: %v", k)
 		}
@@ -109,7 +126,9 @@ func TestNewRadixTrieMap(t *testing.T) {
 	}
 
 	for k, v := range inp {
+		//fmt.Println("deleting: ", k, v)
 		out, ok := r.Delete([]byte(k))
+		//fmt.Println("deleted: ", k, v, out, ok)
 		if !ok {
 			t.Fatalf("missing key: %v", k)
 		}
@@ -135,7 +154,7 @@ func TestNewRadixTrieMap(t *testing.T) {
 }
 
 func TestEmptyKey(t *testing.T) {
-	r := NewRadixTrieMap[byte, bool]()
+	r := NewRadixMap[byte, bool]()
 
 	s := []string{"", "A", "AB"}
 
@@ -151,14 +170,14 @@ func TestEmptyKey(t *testing.T) {
 	})
 
 	if len(inOrder) != len(s) {
-		t.Fatalf("bad length: %v %v", len(inOrder), len(s))
+		t.Fatalf("bad length: %v %v %v", len(inOrder), len(s), r.Len())
 	}
 
 	if !slices.Equal(inOrder, s) {
 		t.Fatalf("bad order: %v %v", inOrder, s)
 	}
 
-	r1 := NewRadixTrieMap[byte, bool]()
+	r1 := NewRadixMap[byte, bool]()
 	_, ok := r1.Delete([]byte(""))
 	if ok {
 		t.Fatalf("bad")
@@ -180,9 +199,11 @@ func TestEmptyKey(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 
-	r := NewRadixTrieMap[byte, bool]()
+	r := NewRadixMap[byte, bool]()
 
 	s := []string{"", "A", "AB"}
+
+	//s := []string{"A", "AB"}
 
 	for _, ss := range s {
 		r.ReplaceOrInsert([]byte(ss), true)
@@ -196,3 +217,43 @@ func TestDelete(t *testing.T) {
 		}
 	}
 }
+
+//func TestDeletePrefix(t *testing.T) {
+//	type exp struct {
+//		inp        []string
+//		prefix     string
+//		out        []string
+//		numDeleted int
+//	}
+//
+//	cases := []exp{
+//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "A", []string{"", "R", "S"}, 3},
+//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "ABC", []string{"", "A", "AB", "R", "S"}, 1},
+//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "", []string{}, 6},
+//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "S", []string{"", "A", "AB", "ABC", "R"}, 1},
+//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "SS", []string{"", "A", "AB", "ABC", "R", "S"}, 0},
+//	}
+//
+//	for _, test := range cases {
+//		r := NewRadixMap[byte, bool]()
+//		for _, ss := range test.inp {
+//			r.ReplaceOrInsert([]byte(ss), true)
+//		}
+//
+//		deleted := r.DeletePrefix(test.prefix)
+//		if deleted != test.numDeleted {
+//			t.Fatalf("Bad delete, expected %v to be deleted but got %v", test.numDeleted, deleted)
+//		}
+//
+//		out := []string{}
+//
+//		r.Ascend(func(s []byte, v bool) bool {
+//			out = append(out, string(s))
+//			return false
+//		})
+//
+//		if !reflect.DeepEqual(out, test.out) {
+//			t.Fatalf("mis-match: %v %v", out, test.out)
+//		}
+//	}
+//}
