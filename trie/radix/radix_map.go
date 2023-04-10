@@ -240,6 +240,44 @@ func (t *RadixMap[K, V]) replaceOrInsert(s []K, value V) (_ V, _ bool) {
 	return
 }
 
+func (t *RadixMap[K, V]) replaceOrInsertExtend(s []K, value V, replaceFunc ReplaceFunc[K, V]) (_ V, _ bool) {
+
+	path, bIdx, kIdx := t.walkPath(s)
+	defer path.Clear()
+	b := path.Peek()
+
+	if kIdx == len(s) && bIdx == len(b.label) && b.lastElem {
+		old := b.value
+		if replaceFunc != nil {
+			b.value = replaceFunc(old)
+			return old, true
+		}
+		b.value = value
+		return old, true
+	}
+
+	if bIdx == len(b.label) {
+		// insert new block
+		b.insertBlock(s[kIdx:], value, true)
+		return
+	}
+
+	// split block
+	//nBlock := b.splitAt(bIdx)
+	b.splitAt(bIdx)
+	b.lastElem = false
+
+	if kIdx == len(s) {
+		//nBlock.insertBlock([]K{}, value, true)
+		b.lastElem = true
+		return
+	}
+
+	// insert new block
+	b.insertBlock(s[kIdx:], value, true)
+	return
+}
+
 // requires: len(s) > 0
 func (t *RadixMap[K, V]) delete(s []K) (_ V, _ bool) {
 
@@ -680,6 +718,37 @@ func (t *RadixMap[K, V]) ReplaceOrInsert(key []K, value V) (_ V, _ bool) {
 		return zero, false
 	}
 	v, ok := t.replaceOrInsert(key, value)
+	if ok {
+		return v, ok
+	}
+
+	t.len++
+	return v, false
+}
+
+func (t *RadixMap[K, V]) ReplaceOrInsertExtend(key []K, value V, replaceFunc ReplaceFunc[K, V]) (_ V, _ bool) {
+	var zero V
+	t.lazyInit()
+
+	if len(key) == 0 {
+
+		if t.root.lastElem {
+			old := t.root.value
+			if replaceFunc != nil {
+				t.root.value = replaceFunc(old)
+				return old, true
+			}
+			t.root.value = value
+			return old, true
+		}
+
+		t.root.value = value
+		t.root.lastElem = true
+		t.len++
+
+		return zero, false
+	}
+	v, ok := t.replaceOrInsertExtend(key, value, replaceFunc)
 	if ok {
 		return v, ok
 	}
