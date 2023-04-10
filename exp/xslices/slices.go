@@ -116,7 +116,7 @@ func MismatchIndex[T comparable](s1, s2 []T) (_ int) {
 		}
 	}
 
-	return -1 // no common prefix
+	return idx
 }
 
 func WalkParallel[E comparable](f func(i int) bool, s ...[][]E) int {

@@ -137,3 +137,7 @@ func split(t *Node, x int) (l *Node, r *Node) {
 func (t *Cartesian[T]) Get(i int) T {
 	return (*t.s)[i]
 }
+
+func (t *Cartesian[T]) Len() int {
+	return len(*t.s)
+}
