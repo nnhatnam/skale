@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"golang.org/x/exp/slices"
+	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -218,42 +220,215 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-//func TestDeletePrefix(t *testing.T) {
-//	type exp struct {
-//		inp        []string
-//		prefix     string
-//		out        []string
-//		numDeleted int
-//	}
-//
-//	cases := []exp{
-//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "A", []string{"", "R", "S"}, 3},
-//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "ABC", []string{"", "A", "AB", "R", "S"}, 1},
-//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "", []string{}, 6},
-//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "S", []string{"", "A", "AB", "ABC", "R"}, 1},
-//		{[]string{"", "A", "AB", "ABC", "R", "S"}, "SS", []string{"", "A", "AB", "ABC", "R", "S"}, 0},
-//	}
-//
-//	for _, test := range cases {
-//		r := NewRadixMap[byte, bool]()
-//		for _, ss := range test.inp {
-//			r.ReplaceOrInsert([]byte(ss), true)
-//		}
-//
-//		deleted := r.DeletePrefix(test.prefix)
-//		if deleted != test.numDeleted {
-//			t.Fatalf("Bad delete, expected %v to be deleted but got %v", test.numDeleted, deleted)
-//		}
-//
-//		out := []string{}
-//
-//		r.Ascend(func(s []byte, v bool) bool {
-//			out = append(out, string(s))
-//			return false
-//		})
-//
-//		if !reflect.DeepEqual(out, test.out) {
-//			t.Fatalf("mis-match: %v %v", out, test.out)
-//		}
-//	}
-//}
+func TestDeletePrefix(t *testing.T) {
+	type exp struct {
+		inp        []string
+		prefix     string
+		out        []string
+		numDeleted int
+	}
+
+	cases := []exp{
+		{[]string{"", "A", "AB", "ABC", "R", "S"}, "A", []string{"", "R", "S"}, 3},
+		{[]string{"", "A", "AB", "ABC", "R", "S"}, "ABC", []string{"", "A", "AB", "R", "S"}, 1},
+		{[]string{"", "A", "AB", "ABC", "R", "S"}, "", []string{}, 6},
+		{[]string{"", "A", "AB", "ABC", "R", "S"}, "S", []string{"", "A", "AB", "ABC", "R"}, 1},
+		{[]string{"", "A", "AB", "ABC", "R", "S"}, "SS", []string{"", "A", "AB", "ABC", "R", "S"}, 0},
+	}
+
+	for _, test := range cases {
+		r := NewRadixMap[byte, bool]()
+		for _, ss := range test.inp {
+			r.ReplaceOrInsert([]byte(ss), true)
+		}
+
+		deleted := r.DeletePrefix([]byte(test.prefix))
+
+		if deleted != nil && deleted.len != test.numDeleted {
+			t.Fatalf("Bad delete, expected %v to be deleted but got %v", test.numDeleted, deleted)
+		}
+
+		out := []string{}
+
+		r.Ascend(func(s []byte, v bool) bool {
+			out = append(out, string(s))
+			return false
+		})
+
+		if !reflect.DeepEqual(out, test.out) {
+			t.Fatalf("mis-match: %v %v", out, test.out)
+		}
+	}
+}
+
+func TestLongestPrefix(t *testing.T) {
+	r := NewRadixMap[byte, any]()
+
+	keys := []string{
+		"",
+		"foo",
+		"foobar",
+		"foobarbaz",
+		"foobarbazzip",
+		"foozip",
+	}
+	for _, k := range keys {
+		r.ReplaceOrInsert([]byte(k), nil)
+	}
+	if r.Len() != len(keys) {
+		t.Fatalf("bad len: %v %v", r.Len(), len(keys))
+	}
+
+	type exp struct {
+		inp string
+		out string
+	}
+	cases := []exp{
+		{"a", ""},
+		{"abc", ""},
+		{"fo", ""},
+		{"foo", "foo"},
+		{"foob", "foo"},
+		{"foobar", "foobar"},
+		{"foobarba", "foobar"},
+		{"foobarbaz", "foobarbaz"},
+		{"foobarbazzi", "foobarbaz"},
+		{"foobarbazzip", "foobarbazzip"},
+		{"foozi", "foo"},
+		{"foozip", "foozip"},
+		{"foozipzap", "foozip"},
+	}
+	for _, test := range cases {
+
+		m, _, _ := r.LongestPrefix([]byte(test.inp))
+
+		//if  len(m) != 0 && !ok {
+		//	t.Fatalf("no match: %v", test)
+		//}
+		if string(m) != test.out {
+			t.Fatalf("mis-match: %v %v", m, test)
+		}
+	}
+}
+
+func TestWalkPrefix(t *testing.T) {
+	r := NewRadixMap[byte, any]()
+
+	keys := []string{
+		"foobar",
+		"foo/bar/baz",
+		"foo/baz/bar",
+		"foo/zip/zap",
+		"zipzap",
+	}
+	for _, k := range keys {
+		r.ReplaceOrInsert([]byte(k), nil)
+	}
+	if r.Len() != len(keys) {
+		t.Fatalf("bad len: %v %v", r.Len(), len(keys))
+	}
+
+	type exp struct {
+		inp string
+		out []string
+	}
+	cases := []exp{
+		{
+			"f",
+			[]string{"foobar", "foo/bar/baz", "foo/baz/bar", "foo/zip/zap"},
+		},
+		{
+			"foo",
+			[]string{"foobar", "foo/bar/baz", "foo/baz/bar", "foo/zip/zap"},
+		},
+		{
+			"foob",
+			[]string{"foobar"},
+		},
+		{
+			"foo/",
+			[]string{"foo/bar/baz", "foo/baz/bar", "foo/zip/zap"},
+		},
+		{
+			"foo/b",
+			[]string{"foo/bar/baz", "foo/baz/bar"},
+		},
+		{
+			"foo/ba",
+			[]string{"foo/bar/baz", "foo/baz/bar"},
+		},
+		{
+			"foo/bar",
+			[]string{"foo/bar/baz"},
+		},
+		{
+			"foo/bar/baz",
+			[]string{"foo/bar/baz"},
+		},
+		{
+			"foo/bar/bazoo",
+			[]string{},
+		},
+		{
+			"z",
+			[]string{"zipzap"},
+		},
+	}
+
+	for _, test := range cases {
+		var out []string
+
+		r.AscendPrefix([]byte(test.inp), func(s []byte, v any) bool {
+			out = append(out, string(s))
+			return false
+		})
+		sort.Strings(out)
+		sort.Strings(test.out)
+		if !reflect.DeepEqual(out, test.out) {
+			t.Fatalf("mis-match: %v %v", out, test.out)
+		}
+	}
+}
+
+func ToMap(r *RadixMap[byte, any]) map[string]any {
+	m := make(map[string]any)
+	r.Ascend(func(s []byte, v any) bool {
+		m[string(s)] = v
+		return false
+	})
+	return m
+}
+
+func TestWalkDelete(t *testing.T) {
+	r := NewRadixMap[byte, any]()
+	r.ReplaceOrInsert([]byte("init0/0"), nil)
+	r.ReplaceOrInsert([]byte("init0/1"), nil)
+	r.ReplaceOrInsert([]byte("init0/2"), nil)
+	r.ReplaceOrInsert([]byte("init0/3"), nil)
+	r.ReplaceOrInsert([]byte("init1/0"), nil)
+	r.ReplaceOrInsert([]byte("init1/1"), nil)
+	r.ReplaceOrInsert([]byte("init1/2"), nil)
+	r.ReplaceOrInsert([]byte("init1/3"), nil)
+	r.ReplaceOrInsert([]byte("init2"), nil)
+
+	deleteFn := func(s []byte, v any) bool {
+		r.Delete(s)
+		return false
+	}
+
+	r.AscendPrefix([]byte("init1"), deleteFn)
+
+	for _, s := range []string{"init0/0", "init0/1", "init0/2", "init0/3", "init2"} {
+		if _, ok := r.Get([]byte(s)); !ok {
+			t.Fatalf("expecting to still find %q", s)
+		}
+	}
+	if n := r.Len(); n != 5 {
+		t.Fatalf("expected to find exactly 5 nodes, instead found %d: %v", n, ToMap(r))
+	}
+
+	r.Ascend(deleteFn)
+	if n := r.Len(); n != 0 {
+		t.Fatalf("expected to find exactly 0 nodes, instead found %d: %v", n, ToMap(r))
+	}
+}

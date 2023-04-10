@@ -156,6 +156,13 @@ func NewRadixMap[K trie.Elem, V any]() *RadixMap[K, V] {
 	}
 }
 
+func (t *RadixMap[K, V]) lazyInit() {
+	if t.root == nil {
+		var zero V
+		t.root = newBlock[K, V]([]K{}, zero, false)
+	}
+}
+
 // walkPath returns the path of blocks that contains the longest prefix of the key
 // and the indexes of the last block element and the key element where the mismatch occurs.
 func (t *RadixMap[K, V]) walkPath(key []K) (_ *stack.StackS[*block[K, V]], bIdx, kIdx int) {
@@ -266,6 +273,59 @@ func (t *RadixMap[K, V]) delete(s []K) (_ V, _ bool) {
 		}
 
 		return old, true
+	}
+
+	return
+}
+
+func (t *RadixMap[K, V]) countChild(b *block[K, V]) int {
+	if b == nil {
+		return 0
+	}
+	return len(b.next)
+}
+
+// require: len(s) > 0
+func (t *RadixMap[K, V]) deletePrefix(prefix []K) (t1 *RadixMap[K, V]) {
+
+	path, bIdx, kIdx := t.walkPath(prefix)
+	defer path.Clear()
+
+	b := path.Peek()
+	if kIdx != len(prefix) {
+		return nil
+	}
+
+	var zero V
+
+	// delete all children
+	subLen := 0
+	t.ascend(b, func(prefix []K, value V) bool {
+		subLen++
+		return false
+	})
+
+	k := b.label[0]
+	b1 := b // save b
+	path.Pop()
+	b = path.Peek()
+	b.removeBlock(k)
+	t.len -= subLen
+
+	// create new tree
+	t1 = NewRadixMap[K, V]()
+	t1.root = newBlock[K, V]([]K{}, zero, false)
+
+	label := make([]K, len(prefix)+len(b1.label[bIdx:]))
+	copy(label, prefix)
+	copy(label[len(prefix):], b1.label[bIdx:])
+	b1.label = label
+
+	t1.root.next = append(t1.root.next, b1)
+	t1.len = subLen
+
+	if b != t.root {
+		b.mergeChild()
 	}
 
 	return
@@ -578,7 +638,7 @@ func (t *RadixMap[K, V]) descendRange(b *block[K, V], greaterThan []K, lessOrEqu
 
 func (t *RadixMap[K, V]) Get(key []K) (_ V, _ bool) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -603,11 +663,7 @@ func (t *RadixMap[K, V]) Get(key []K) (_ V, _ bool) {
 
 func (t *RadixMap[K, V]) ReplaceOrInsert(key []K, value V) (_ V, _ bool) {
 	var zero V
-	if t.root == nil {
-
-		t.root = newBlock([]K{}, zero, false)
-
-	}
+	t.lazyInit()
 
 	if len(key) == 0 {
 
@@ -634,7 +690,7 @@ func (t *RadixMap[K, V]) ReplaceOrInsert(key []K, value V) (_ V, _ bool) {
 
 func (t *RadixMap[K, V]) Delete(key []K) (_ V, _ bool) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -661,22 +717,63 @@ func (t *RadixMap[K, V]) Delete(key []K) (_ V, _ bool) {
 	return old, found
 }
 
+func (t *RadixMap[K, V]) DeletePrefix(prefix []K) (_ *RadixMap[K, V]) {
+
+	if t.root == nil || t.len == 0 {
+		return
+	}
+
+	if len(prefix) == 0 {
+		t1 := NewRadixMap[K, V]()
+		t1.lazyInit()
+		t.root, t1.root = t1.root, t.root
+		t.len, t1.len = t1.len, t.len
+		return t1
+	}
+
+	return t.deletePrefix(prefix)
+}
+
 func (t *RadixMap[K, V]) Len() int {
 	return t.len
 }
 
 func (t *RadixMap[K, V]) Ascend(iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
 	t.ascend(t.root, iterator)
 }
 
+func (t *RadixMap[K, V]) AscendPrefix(prefix []K, iterator ItemIterator[K, V]) {
+
+	path, bIdx, kIdx := t.walkPath(prefix)
+	defer path.Clear()
+
+	b := path.Peek()
+
+	// there is no match for the prefix
+	if b == t.root {
+		return
+	}
+
+	// there is at least one match for the prefix
+	matchedPrefix := prefix[0 : kIdx-bIdx]
+
+	t.ascend(b, func(prefix []K, value V) bool {
+		if iterator(append(matchedPrefix, prefix...), value) {
+			return true
+		}
+		return false
+	})
+
+}
+
 func (t *RadixMap[K, V]) AscendGreaterOrEqual(greaterOrEqual []K, iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -686,7 +783,7 @@ func (t *RadixMap[K, V]) AscendGreaterOrEqual(greaterOrEqual []K, iterator ItemI
 
 func (t *RadixMap[K, V]) AscendLessThan(lessThan []K, iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -696,7 +793,7 @@ func (t *RadixMap[K, V]) AscendLessThan(lessThan []K, iterator ItemIterator[K, V
 
 func (t *RadixMap[K, V]) AscendRange(greaterThan []K, lessOrEqual []K, iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -706,7 +803,7 @@ func (t *RadixMap[K, V]) AscendRange(greaterThan []K, lessOrEqual []K, iterator 
 
 func (t *RadixMap[K, V]) Descend(iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -715,7 +812,7 @@ func (t *RadixMap[K, V]) Descend(iterator ItemIterator[K, V]) {
 
 func (t *RadixMap[K, V]) DescendLessOrEqual(lessOrEqual []K, iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -725,7 +822,7 @@ func (t *RadixMap[K, V]) DescendLessOrEqual(lessOrEqual []K, iterator ItemIterat
 
 func (t *RadixMap[K, V]) DescendGreaterThan(greaterThan []K, iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -735,7 +832,7 @@ func (t *RadixMap[K, V]) DescendGreaterThan(greaterThan []K, iterator ItemIterat
 
 func (t *RadixMap[K, V]) DescendRange(greaterThan []K, lessOrEqual []K, iterator ItemIterator[K, V]) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -743,8 +840,45 @@ func (t *RadixMap[K, V]) DescendRange(greaterThan []K, lessOrEqual []K, iterator
 
 }
 
+func (t *RadixMap[K, V]) LongestPrefix(prefix []K) (longest []K, value V, hasValue bool) {
+
+	path, bIdx, kIdx := t.walkPath(prefix)
+	defer path.Clear()
+
+	b := path.Peek()
+
+	// there is no match for the prefix
+	if b == t.root {
+		return
+	}
+
+	for kIdx >= 0 {
+		// there is at least one match for the prefix
+
+		if bIdx == len(b.label) {
+			longest = prefix[0:kIdx]
+			if b.lastElem {
+				value = b.value
+				hasValue = true
+				return
+			}
+			kIdx -= len(b.label)
+			path.Pop()
+			b = path.Peek()
+			continue
+		}
+
+		kIdx -= bIdx
+		path.Pop()
+		b = path.Peek()
+		bIdx = len(b.label)
+	}
+
+	return
+}
+
 func (t *RadixMap[K, V]) Min() (_ []K, _ V, _ bool) {
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
@@ -761,7 +895,7 @@ func (t *RadixMap[K, V]) Min() (_ []K, _ V, _ bool) {
 
 func (t *RadixMap[K, V]) Max() (_ []K, _ V, _ bool) {
 
-	if t == nil || t.root == nil || t.len == 0 {
+	if t.root == nil || t.len == 0 {
 		return
 	}
 
