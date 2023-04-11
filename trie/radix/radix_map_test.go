@@ -73,20 +73,6 @@ func TestNewRadixMap(t *testing.T) {
 		t.Errorf("Got %v expected %v", r.Len(), len(inp))
 	}
 
-	//r.ReplaceOrInsert([]byte("97345125-20a0-5b2f-9862-532be5d3c122"), 0)
-	//r.ReplaceOrInsert([]byte("d504d04b-a917-e5dd-6fe0-fff347b6579a"), 1)
-	//r.ReplaceOrInsert([]byte("2a82a2af-9dd8-0b76-401f-073308564870"), 2)
-	//r.ReplaceOrInsert([]byte("d1c9f0ed-6d53-01ec-44ab-c080da791cc7"), 0)
-	//r.ReplaceOrInsert([]byte("50b0248c-4842-e2a2-9f18-21cbfde1e108"), 1)
-	//r.ReplaceOrInsert([]byte("7d3cb7a2-bdfb-e75f-b648-03397e5a959b"), 2)
-	//r.ReplaceOrInsert([]byte("80f413c3-2cf2-4477-2a94-af7446fd3f61"), 0)
-	//r.ReplaceOrInsert([]byte("c0ceb1ba-2927-a0d9-2f43-7e115dd74589"), 1)
-	//r.ReplaceOrInsert([]byte("7a5c4eec-18b9-c5e8-7a57-d909bb099875"), 2)
-	//r.ReplaceOrInsert([]byte("c0b0d9d2-1f6f-976b-5128-5f376f06dbe9"), 0)
-	//r.ReplaceOrInsert([]byte("04de4ece-63a7-5303-dbed-ff29392c6209"), 1)
-	//r.ReplaceOrInsert([]byte("3eedb740-3a93-9358-8ec5-23139d9eaeba"), 2)
-	//r.ReplaceOrInsert([]byte("7e0a1474-72d4-05c5-e338-36260d1c8716"), 2)
-
 	//r.ReplaceOrInsert([]byte("romane"), 2)
 	//r.ReplaceOrInsert([]byte("romanus"), 3)
 	//r.ReplaceOrInsert([]byte("romulus"), 4)
@@ -142,16 +128,88 @@ func TestNewRadixMap(t *testing.T) {
 		t.Fatalf("bad length: %v", r.Len())
 	}
 
-	//r.Insert([]byte("romane"), 2)
-	//fmt.Println("in order traverse: ", inOrderByteTraversal(r.root))
-	//
-	//r.Insert([]byte("romanus"), 3)
-	//
-	//fmt.Println("in order traverse: ", inOrderByteTraversal(r.root))
-	//
-	//if r.Len() != len(inp)+2 {
-	//	t.Errorf("Got %v expected %v", r.Len(), len(inp)+2)
-	//}
+}
+
+func TestNewRadixMapExtend(t *testing.T) {
+	var min, max string
+	inp := make(map[string]int)
+	for i := 0; i < 10000; i++ {
+		gen := generateUUID()
+		inp[gen] = i
+		if gen < min || i == 0 {
+			min = gen
+		}
+		if gen > max || i == 0 {
+			max = gen
+		}
+	}
+
+	r := NewRadixMap[byte, int]()
+
+	for k, v := range inp {
+		r.ReplaceOrInsertExtend([]byte(k), v, nil)
+	}
+
+	if r.Len() != len(inp) {
+		t.Errorf("Got %v expected %v", r.Len(), len(inp))
+	}
+
+	r.AscendGreaterOrEqual([]byte(min), func(key []byte, value int) bool {
+		if string(key) < min {
+			t.Errorf("Got %v expected %v", string(key), min)
+		}
+		if string(key) > max {
+			t.Errorf("Got %v expected %v", string(key), max)
+		}
+		return false
+	})
+
+	for k, v := range inp {
+		out, ok := r.Get([]byte(k))
+
+		if !ok {
+			t.Fatalf("missing key: %v", k)
+		}
+		if out != v {
+			t.Fatalf("value mis-match: %v %v", out, v)
+		}
+
+		r.replaceOrInsertExtend([]byte(k), v, func(oldValue int) int {
+			return oldValue + v
+		})
+
+		out, ok = r.Get([]byte(k))
+
+		if !ok {
+			t.Fatalf("missing key: %v", k)
+		}
+		if out != v*2 {
+			t.Fatalf("value mis-match: %v %v", out, v)
+		}
+	}
+
+	// Check min and max
+	outMin, _, _ := r.Min()
+	if string(outMin) != min {
+		t.Fatalf("bad minimum: %v %v", outMin, min)
+	}
+	outMax, _, _ := r.Max()
+	if string(outMax) != max {
+		t.Fatalf("bad maximum: %v %v", outMax, max)
+	}
+
+	for k, v := range inp {
+		out, ok := r.Delete([]byte(k))
+		if !ok {
+			t.Fatalf("missing key: %v", k)
+		}
+		if out != v*2 {
+			t.Fatalf("value mis-match: %v %v", out, v)
+		}
+	}
+	if r.Len() != 0 {
+		t.Fatalf("bad length: %v", r.Len())
+	}
 
 }
 
@@ -164,7 +222,7 @@ func TestEmptyKey(t *testing.T) {
 		r.ReplaceOrInsert([]byte(ss), true)
 	}
 
-	inOrder := []string{}
+	var inOrder []string
 
 	r.AscendGreaterOrEqual([]byte(""), func(key []byte, value bool) bool {
 		inOrder = append(inOrder, string(key))
@@ -185,6 +243,50 @@ func TestEmptyKey(t *testing.T) {
 		t.Fatalf("bad")
 	}
 	_, ok = r1.ReplaceOrInsert([]byte(""), true)
+	if ok {
+		t.Fatalf("bad")
+	}
+	val, ok := r1.Get([]byte(""))
+	if !ok || val != true {
+		t.Fatalf("bad: %v", val)
+	}
+	val, ok = r1.Delete([]byte(""))
+	if !ok || val != true {
+		t.Fatalf("bad: %v", val)
+	}
+
+}
+
+func TestEmptyKeyExtend(t *testing.T) {
+	r := NewRadixMap[byte, bool]()
+
+	s := []string{"", "A", "AB"}
+
+	for _, ss := range s {
+		r.ReplaceOrInsertExtend([]byte(ss), true, nil)
+	}
+
+	var inOrder []string
+
+	r.AscendGreaterOrEqual([]byte(""), func(key []byte, value bool) bool {
+		inOrder = append(inOrder, string(key))
+		return false
+	})
+
+	if len(inOrder) != len(s) {
+		t.Fatalf("bad length: %v %v %v", len(inOrder), len(s), r.Len())
+	}
+
+	if !slices.Equal(inOrder, s) {
+		t.Fatalf("bad order: %v %v", inOrder, s)
+	}
+
+	r1 := NewRadixMap[byte, bool]()
+	_, ok := r1.Delete([]byte(""))
+	if ok {
+		t.Fatalf("bad")
+	}
+	_, ok = r1.ReplaceOrInsertExtend([]byte(""), true, nil)
 	if ok {
 		t.Fatalf("bad")
 	}
@@ -384,7 +486,7 @@ func TestWalkPrefix(t *testing.T) {
 		})
 		sort.Strings(out)
 		sort.Strings(test.out)
-		if !reflect.DeepEqual(out, test.out) {
+		if !slices.Equal(out, test.out) {
 			t.Fatalf("mis-match: %v %v", out, test.out)
 		}
 	}
@@ -399,7 +501,18 @@ func ToMap(r *RadixMap[byte, any]) map[string]any {
 	return m
 }
 
-func TestWalkDelete(t *testing.T) {
+func countBlock(b *block[byte, any]) int {
+	count := 1
+	for _, c := range b.next {
+		if c != nil {
+			count += countBlock(c)
+		}
+	}
+	return count
+}
+
+func TestWalkMarkDelete(t *testing.T) {
+	// Don't modify this test case. This is a test for these specifics keys only. Add keys or modify keys may cause the test to fail.
 	r := NewRadixMap[byte, any]()
 	r.ReplaceOrInsert([]byte("init0/0"), nil)
 	r.ReplaceOrInsert([]byte("init0/1"), nil)
@@ -412,10 +525,9 @@ func TestWalkDelete(t *testing.T) {
 	r.ReplaceOrInsert([]byte("init2"), nil)
 
 	deleteFn := func(s []byte, v any) bool {
-		r.Delete(s)
+		r.MarkDelete(s)
 		return false
 	}
-
 	r.AscendPrefix([]byte("init1"), deleteFn)
 
 	for _, s := range []string{"init0/0", "init0/1", "init0/2", "init0/3", "init2"} {
@@ -423,12 +535,41 @@ func TestWalkDelete(t *testing.T) {
 			t.Fatalf("expecting to still find %q", s)
 		}
 	}
+
 	if n := r.Len(); n != 5 {
 		t.Fatalf("expected to find exactly 5 nodes, instead found %d: %v", n, ToMap(r))
 	}
 
+	if countBlock(r.root) != 13 {
+		t.Fatalf("expected to find exactly 13 blocks, instead found %d", countBlock(r.root))
+	}
+
+	r.Shrink()
+
+	r.Ascend(func(key []byte, v any) bool {
+		return false
+	})
+
+	if countBlock(r.root) != 8 {
+		t.Fatalf("expected to find exactly 8 blocks, instead found %d", countBlock(r.root))
+	}
+
+	r.Ascend(func(key []byte, v any) bool {
+		return false
+	})
+
 	r.Ascend(deleteFn)
+
 	if n := r.Len(); n != 0 {
 		t.Fatalf("expected to find exactly 0 nodes, instead found %d: %v", n, ToMap(r))
 	}
+
+	if countBlock(r.root) != 8 {
+		t.Fatalf("expected to find exactly 8 blocks, instead found %d", countBlock(r.root))
+	}
+	r.Shrink()
+	if countBlock(r.root) != 1 {
+		t.Fatalf("expected to find exactly 1 block, instead found %d", countBlock(r.root))
+	}
+
 }

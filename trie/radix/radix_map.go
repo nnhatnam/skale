@@ -166,11 +166,9 @@ func (t *RadixMap[K, V]) lazyInit() {
 // walkPath returns the path of blocks that contains the longest prefix of the key
 // and the indexes of the last block element and the key element where the mismatch occurs.
 func (t *RadixMap[K, V]) walkPath(key []K) (_ *stack.StackS[*block[K, V]], bIdx, kIdx int) {
-
 	s := stack.NewStackS[*block[K, V]]()
 	b := t.root
 	i := 0
-
 	s.Push(b)
 	b = b.nextBlock(key[i])
 
@@ -296,7 +294,6 @@ func (t *RadixMap[K, V]) delete(s []K) (_ V, _ bool) {
 			k := b.label[0]
 			b = path.Peek()
 			b.removeBlock(k)
-
 			if len(b.next) == 1 && b != t.root {
 				b.mergeChild()
 			}
@@ -314,6 +311,58 @@ func (t *RadixMap[K, V]) delete(s []K) (_ V, _ bool) {
 	}
 
 	return
+}
+
+// requires: len(s) > 0
+func (t *RadixMap[K, V]) markDelete(s []K) (_ V, _ bool) {
+
+	path, bIdx, kIdx := t.walkPath(s)
+	defer path.Clear()
+	b := path.Peek()
+	var zero V
+
+	if kIdx == len(s) && bIdx == len(b.label) && b.lastElem {
+
+		old := b.value
+		b.value = zero
+		b.lastElem = false
+
+		return old, true
+	}
+
+	return
+}
+
+func (t *RadixMap[K, V]) shrink(b *block[K, V]) (b1 *block[K, V]) {
+
+	if b == nil {
+		return nil
+	}
+
+	for i, _ := range b.next {
+		b.next[i] = t.shrink(b.next[i])
+	}
+
+	b2 := b.next[:0]
+
+	//filter out nil
+	for _, b3 := range b.next {
+		if b3 != nil {
+			b2 = append(b2, b3)
+		}
+	}
+
+	b.next = b2
+
+	if b != t.root && len(b.next) == 0 && !b.lastElem {
+		return nil
+	}
+
+	if b != t.root && len(b.next) == 1 {
+		b.mergeChild()
+	}
+
+	return b
 }
 
 func (t *RadixMap[K, V]) countChild(b *block[K, V]) int {
@@ -376,7 +425,6 @@ func (t *RadixMap[K, V]) ascend(b *block[K, V], iterator ItemIterator[K, V]) {
 	}
 
 	var inOrderRecursive func(b *block[K, V], prefix []K) bool
-
 	inOrderRecursive = func(b *block[K, V], prefix []K) bool {
 
 		if b.lastElem {
@@ -391,12 +439,13 @@ func (t *RadixMap[K, V]) ascend(b *block[K, V], iterator ItemIterator[K, V]) {
 			if inOrderRecursive(child, append(prefix, child.label...)) {
 				return true // stop iteration
 			}
+
 		}
 
 		return false
 	}
 
-	inOrderRecursive(b, []K{})
+	inOrderRecursive(b, b.label)
 }
 
 func (t *RadixMap[K, V]) ascendGreaterOrEqual(b *block[K, V], greaterOrEqual []K, iterator ItemIterator[K, V]) {
@@ -757,6 +806,34 @@ func (t *RadixMap[K, V]) ReplaceOrInsertExtend(key []K, value V, replaceFunc Rep
 	return v, false
 }
 
+func (t *RadixMap[K, V]) MarkDelete(key []K) (_ V, _ bool) {
+
+	if t.root == nil || t.len == 0 {
+		return
+	}
+
+	var zero V
+
+	if len(key) == 0 {
+
+		if old, found := t.root.value, t.root.lastElem; found {
+			t.root.lastElem, t.root.value = false, zero
+			t.len--
+			return old, true
+		}
+
+		return
+	}
+
+	old, found := t.markDelete(key)
+
+	if found {
+		t.len--
+	}
+
+	return old, found
+}
+
 func (t *RadixMap[K, V]) Delete(key []K) (_ V, _ bool) {
 
 	if t.root == nil || t.len == 0 {
@@ -824,15 +901,14 @@ func (t *RadixMap[K, V]) AscendPrefix(prefix []K, iterator ItemIterator[K, V]) {
 	b := path.Peek()
 
 	// there is no match for the prefix
-	if b == t.root {
+	if b == t.root || kIdx < len(prefix) {
 		return
 	}
 
 	// there is at least one match for the prefix
 	matchedPrefix := prefix[0 : kIdx-bIdx]
-
-	t.ascend(b, func(prefix []K, value V) bool {
-		if iterator(append(matchedPrefix, prefix...), value) {
+	t.ascend(b, func(p []K, value V) bool {
+		if iterator(append(matchedPrefix, p...), value) {
 			return true
 		}
 		return false
@@ -977,4 +1053,8 @@ func (t *RadixMap[K, V]) Max() (_ []K, _ V, _ bool) {
 	})
 
 	return key, max, true
+}
+
+func (t *RadixMap[K, V]) Shrink() {
+	t.root = t.shrink(t.root)
 }
