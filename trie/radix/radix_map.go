@@ -36,34 +36,6 @@ func (b *block[K, V]) nextBlock(e K) *block[K, V] {
 	return nil
 }
 
-// requires: b1.label != ""
-func (b *block[K, V]) upsertBlock(label []K, value V, lastElem bool) *block[K, V] {
-
-	if b.next == nil {
-		b.next = make([]*block[K, V], 0, 1)
-	}
-
-	e := label[0]
-
-	//perform binary search
-	idx := sort.Search(len(b.next), func(i int) bool {
-		return b.next[i].label[0] >= e
-	})
-
-	if idx < len(b.next) && b.next[idx].label[0] == e {
-
-		b.next[idx] = newBlock(label, value, lastElem)
-		return b.next[idx]
-	}
-
-	//insert new block
-	b.next = append(b.next, nil)
-	copy(b.next[idx+1:], b.next[idx:])
-	b.next[idx] = newBlock(label, value, lastElem)
-
-	return b.next[idx]
-}
-
 func (b *block[K, V]) insertBlock(label []K, value V, lastElem bool) *block[K, V] {
 
 	if b.next == nil {

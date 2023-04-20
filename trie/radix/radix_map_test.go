@@ -24,31 +24,6 @@ func generateUUID() string {
 		buf[10:16])
 }
 
-func inOrderByteTraversal[V any](n *node[byte, V]) []string {
-	if n == nil {
-		return nil
-	}
-
-	var ret []string
-
-	var inOrderRecursive func(n *node[byte, V], prefix []byte)
-
-	inOrderRecursive = func(n *node[byte, V], prefix []byte) {
-
-		if n.lastElem {
-			ret = append(ret, string(prefix))
-		}
-
-		for _, e := range n.edges {
-			inOrderRecursive(e.node, append(prefix, e.label...))
-		}
-	}
-
-	inOrderRecursive(n, []byte{})
-
-	return ret
-}
-
 func TestNewRadixMap(t *testing.T) {
 	var min, max string
 	inp := make(map[string]int)
@@ -72,15 +47,6 @@ func TestNewRadixMap(t *testing.T) {
 	if r.Len() != len(inp) {
 		t.Errorf("Got %v expected %v", r.Len(), len(inp))
 	}
-
-	//r.ReplaceOrInsert([]byte("romane"), 2)
-	//r.ReplaceOrInsert([]byte("romanus"), 3)
-	//r.ReplaceOrInsert([]byte("romulus"), 4)
-	//r.ReplaceOrInsert([]byte("rubens"), 5)
-	//r.ReplaceOrInsert([]byte("ruber"), 6)
-	//r.ReplaceOrInsert([]byte("rubicon"), 7)
-	//r.ReplaceOrInsert([]byte("rubicundus"), 8)
-	//r.ReplaceOrInsert([]byte("go"), 9)
 
 	r.AscendGreaterOrEqual([]byte(min), func(key []byte, value int) bool {
 		if string(key) < min {
