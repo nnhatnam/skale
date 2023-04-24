@@ -539,3 +539,34 @@ func TestWalkMarkDelete(t *testing.T) {
 	}
 
 }
+
+func panics(f func()) (b bool) {
+	defer func() {
+		if x := recover(); x != nil {
+			b = true
+		}
+	}()
+	f()
+	return false
+}
+
+func TestBug_1(t *testing.T) {
+	// test for a bug that a panic is triggered when the key is end with fully matched label in a non-leaf node.
+	if panics(func() {
+		r := NewRadixMap[byte, int]()
+		r.ReplaceOrInsert([]byte("init0/0"), 0)
+		r.ReplaceOrInsert([]byte("init0/1"), 0)
+		r.ReplaceOrInsert([]byte("init0/2"), 0)
+		r.ReplaceOrInsert([]byte("init0/3"), 0)
+		r.ReplaceOrInsert([]byte("init0/"), 0)
+
+		r.ReplaceOrInsertExtend([]byte("init1/0"), 0, func(v int) int { return v + 1 })
+		r.ReplaceOrInsertExtend([]byte("init1/1"), 0, func(v int) int { return v + 1 })
+		r.ReplaceOrInsertExtend([]byte("init1/2"), 0, func(v int) int { return v + 1 })
+		r.ReplaceOrInsertExtend([]byte("init1/3"), 0, func(v int) int { return v + 1 })
+		r.ReplaceOrInsertExtend([]byte("init0/"), 0, func(v int) int { return v + 1 })
+	}) {
+		t.Errorf("Should not panic")
+	}
+
+}

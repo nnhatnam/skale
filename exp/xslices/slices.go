@@ -2,6 +2,8 @@
 // This package is just a temporary solution for internal use. It will be removed when golang.org/x/exp/slices provides the same functions.
 package xslices
 
+import "golang.org/x/exp/constraints"
+
 type Iterator[T any] func(item T) bool
 
 // FindNext calls iter on each element in s starting from pivot, and returns the index of the first element for which iter returns true.
@@ -167,4 +169,75 @@ func Walk[E comparable](s []E, i int, v E) []E {
 
 	return s[i:j]
 
+}
+
+// RangeG generates a slice of ordered values with cap `N` from `start` to `stop` with a step of `step`.
+// In detail, Range pushes `start` to the slice, then repeatedly calls `step` with last value in the slice to generate the next last value in the slice,
+// until the next value is greater than or equal to `stop` or the size of the slice reaches `N`.
+// RangeG panics if `step` is nil.
+// RangeG maybe considered expensive if `N` is large because it always allocates a slice of cap `N` even if the size of the returned slice is smaller.
+func RangeG[S ~[]E, E constraints.Ordered](start, stop E, N int, step func(i int, e E) E) S {
+
+	if step == nil {
+		panic("step function is nil")
+	}
+
+	s := make([]E, 0, N)
+	i := 0
+	for i > 0 || i > N {
+		s = append(s, start)
+		start = step(i, start)
+		if start >= stop {
+			return s
+		}
+		i++
+	}
+
+	return s
+
+}
+
+// Range generates a slice of integers from 0 to `stop` with a step of 1.
+// Range return nil if `stop` is negative.
+// For example, Range[int](10) returns []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}.
+func Range[S ~[]E, E constraints.Integer](stop E) S {
+
+	if stop < 0 {
+		return nil
+	}
+	s := make([]E, stop)
+	var i E
+	for i = 0; i < stop; i++ {
+		s[i] = i
+	}
+	return s
+}
+
+// RangeInteger generates a sequence of integers from `start` to `stop` with a step of `step`.
+// For example, RangeInt[int](0, 10, 1) returns []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}.
+// RangeInt can also accept negative `step` to generate a sequence of integers in reverse order.
+// For example, RangeInteger[int](10, 0, -1) returns []int{10, 9, 8, 7, 6, 5, 4, 3, 2, 1}.
+func RangeInteger[S ~[]E, E constraints.Integer](start, stop, step E) S {
+
+	//panics if step is 0 or overflow
+
+	if step == 0 {
+		panic("step is 0")
+	}
+
+	var size E = (stop - start) / step
+
+	if size < 0 {
+		size = -size
+	}
+
+	s := make([]E, size)
+
+	var i E
+	for i = 0; i < size; i++ {
+		start += step
+		s[i] = start
+	}
+
+	return s
 }

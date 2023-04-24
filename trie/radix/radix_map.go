@@ -182,10 +182,17 @@ func (t *RadixMap[K, V]) replaceOrInsert(s []K, value V) (_ V, _ bool) {
 	defer path.Clear()
 	b := path.Peek()
 
-	if kIdx == len(s) && bIdx == len(b.label) && b.lastElem {
-		old := b.value
+	if kIdx == len(s) && bIdx == len(b.label) {
+
+		if b.lastElem {
+			old := b.value
+			b.value = value
+			return old, true
+		}
+
 		b.value = value
-		return old, true
+		b.lastElem = true
+		return
 	}
 
 	if bIdx == len(b.label) {
@@ -216,14 +223,21 @@ func (t *RadixMap[K, V]) replaceOrInsertExtend(s []K, value V, replaceFunc Repla
 	defer path.Clear()
 	b := path.Peek()
 
-	if kIdx == len(s) && bIdx == len(b.label) && b.lastElem {
+	if kIdx == len(s) && bIdx == len(b.label) {
 		old := b.value
+
 		if replaceFunc != nil {
 			b.value = replaceFunc(old)
+		} else {
+			b.value = value
+		}
+
+		if b.lastElem {
 			return old, true
 		}
-		b.value = value
-		return old, true
+
+		return
+
 	}
 
 	if bIdx == len(b.label) {
