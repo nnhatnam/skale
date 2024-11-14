@@ -2,31 +2,6 @@
 // It is intended to be used internally by other packages.
 //
 // Structure is not thread safe.
-//
-// The implementation is based on the standard library's list package, but with several changes in the API:
-//
-// 1. The list is generic and can be used with any type.
-//
-// 2. *Element is renamed to *Node to avoid confusion with the standard library's list package.
-//
-// 3. Instead of using *Node as a way to iterate through the list, this package introduces a *Cursor type to do that, which is similar to c++ iter concept.
-//
-// Why Cursor?
-//
-// In the standard library's list package, internally, each `Element` has a pointer to the list it belongs to,
-// which helps prevent mistakes like adding an `Element` to multiple lists or a list can delete an Element from another list.
-// It offers a good level of foolproof. However, this comes at the cost of an extra pointer that increases the memory footprint by 8 bytes for 64-bit arch or 4 bytes for 32-bit arch.
-// If you are implementing a data structure that uses a linked list internally, and you care about memory footprint, removing that the extra pointer and taking the responsibility of not making mistakes may make more sense.
-// That's the reason for this package. Each `Node` in this package has no pointer to the list it belongs to. Without the extra pointer expose the risk of mistakes mention above.
-// To avoid mistakes, this package introduces `Cursor`, which is similar, but not identical, to c++ iter concept.
-//
-// A Cursor is a list reader contains a pointer to the list it belongs to and a pointer to the current Node it points to. It can move freely in the list in both directions.
-// To use a Cursor, you need to aware how the list is implemented internally.
-// The list has a sentinel node that points to the first and last node in the list. It helps simplify certain list operations.
-// So, in internal view, the list can be viewed as a ring with the sentinel node as the head and tail, and Cursor views the list in that manner.
-// It is allowed a Cursor to point to the sentinel node, but it will return nil when you extract the Node if it is pointing to the sentinel.
-// Technically, the Cursor will be able to move infinitely in both directions.
-//
 // To iterate over a list (where l is a *List):
 //
 //	cursor := l.Cursor() // create a cursor point to first node
@@ -38,26 +13,26 @@
 //
 //	cursor := l.Cursor() // create a cursor point to the sentinel node
 //	for cursor.MoveNext() != nil {
-//		n := cursor.Node()
+//		n := cursor.node()
 //		// do something with n
 //	}
 package linkedlist
 
-// Node is a node in a doubly linked list
-type Node[T any] struct {
-	next, prev *Node[T]
+// node is a node in a doubly linked list
+type node[T any] struct {
+	next, prev *node[T]
 
-	Value T
+	value T
 }
 
-// NewNode creates a new node with the given value
-func NewNode[T any](value T) *Node[T] {
-	return &Node[T]{Value: value}
+// Newnode creates a new node with the given value
+func newNode[T any](value T) *node[T] {
+	return &node[T]{value: value}
 }
 
 // List represents a doubly linked list.
 type List[T any] struct {
-	root Node[T]
+	root node[T]
 	len  int
 }
 
@@ -86,7 +61,7 @@ func (l *List[T]) lazyInit() {
 }
 
 // first returns the first node in the list
-func (l *List[T]) front() *Node[T] {
+func (l *List[T]) front() *node[T] {
 	if l.len == 0 {
 		return nil
 	}
@@ -94,7 +69,7 @@ func (l *List[T]) front() *Node[T] {
 }
 
 // last returns the last node in the list
-func (l *List[T]) back() *Node[T] {
+func (l *List[T]) back() *node[T] {
 	if l.len == 0 {
 		return nil
 	}
@@ -102,7 +77,7 @@ func (l *List[T]) back() *Node[T] {
 }
 
 // insert inserts a node after mark. The mask must not be nil.
-func (l *List[T]) insert(n, mark *Node[T]) *Node[T] {
+func (l *List[T]) insert(n, mark *node[T]) *node[T] {
 
 	//n after mark, n before mark.next
 	n.prev = mark
@@ -117,13 +92,13 @@ func (l *List[T]) insert(n, mark *Node[T]) *Node[T] {
 	return n
 }
 
-// insertValue is a convenience wrapper for insert(&Node{Value: v}, at)
-func (l *List[T]) insertValue(v T, mark *Node[T]) *Node[T] {
-	return l.insert(NewNode(v), mark)
+// insertValue is a convenience wrapper for insert(&node{Value: v}, at)
+func (l *List[T]) insertValue(v T, mark *node[T]) *node[T] {
+	return l.insert(newNode(v), mark)
 }
 
 // move moves e to next to at.
-func (l *List[T]) move(e, at *Node[T]) {
+func (l *List[T]) move(e, at *node[T]) {
 	if e == at {
 		return
 	}
@@ -137,7 +112,7 @@ func (l *List[T]) move(e, at *Node[T]) {
 }
 
 // remove removes n from the list. The node must not be nil.
-func (l *List[T]) remove(n *Node[T]) *Node[T] {
+func (l *List[T]) remove(n *node[T]) *node[T] {
 
 	//node before n is now before n.next
 	n.prev.next = n.next
@@ -166,13 +141,13 @@ func (l *List[T]) Len() int {
 
 // Front returns the first element of list l. Return nil if the list is empty.
 // The complexity is O(1).
-func (l *List[T]) Front() *Node[T] {
+func (l *List[T]) Front() *node[T] {
 	return l.front()
 }
 
 // Back returns the last element of list l. Return nil if the list is empty.
 // The complexity is O(1).
-func (l *List[T]) Back() *Node[T] {
+func (l *List[T]) Back() *node[T] {
 	return l.back()
 }
 
@@ -210,7 +185,7 @@ func (l *List[T]) PushFrontBulk(values ...T) {
 
 // PopFront removes the first element (front) from list l and returns it. Return nil if the list is empty.
 // The complexity is O(1).
-func (l *List[T]) PopFront() *Node[T] {
+func (l *List[T]) PopFront() *node[T] {
 	l.lazyInit()
 
 	n := l.front()
@@ -223,7 +198,7 @@ func (l *List[T]) PopFront() *Node[T] {
 
 // PopBack removes the last element (back) from list l and returns it. Return nil if the list is empty.
 // The complexity is O(1).
-func (l *List[T]) PopBack() *Node[T] {
+func (l *List[T]) PopBack() *node[T] {
 	l.lazyInit()
 
 	if l.len == 0 {
@@ -242,7 +217,7 @@ func (l *List[T]) PopBack() *Node[T] {
 // If c is point to the sentinel node, InsertBefore inserts to the tail (same effect as PushBack).
 // If c is not associated with l, InsertBefore returns nil.
 // The complexity is O(1).
-func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *Node[T] {
+func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *node[T] {
 	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
@@ -257,7 +232,7 @@ func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *Node[T] {
 // If c is point to the sentinel node, InsertAfter inserts to the head (same effect as PushFront).
 // If c is not associated with l or invalid, InsertAfter returns nil.
 // The complexity is O(1).
-func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *Node[T] {
+func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *node[T] {
 	if c.list != l || c.current == &c.list.root {
 		return nil
 	}
@@ -270,7 +245,7 @@ func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *Node[T] {
 
 // RemoveAt removes the node at the cursor c, return the removed node. Cursor c move to the next node after the removal.
 // If c is point to the sentinel node, RemoveAt returns nil.
-func (l *List[T]) RemoveAt(c *Cursor[T]) *Node[T] {
+func (l *List[T]) RemoveAt(c *Cursor[T]) *node[T] {
 
 	if c.list != l || c.current == &c.list.root {
 		return nil
@@ -290,7 +265,7 @@ func (l *List[T]) RemoveAt(c *Cursor[T]) *Node[T] {
 // If c is point to the sentinel node, RemoveAfter removes the first element of the list (same effect as RemoveFront).
 // If c is not associated with l, RemoveAfter returns nil.
 // The complexity is O(1).
-func (l *List[T]) RemoveAfter(c *Cursor[T]) *Node[T] {
+func (l *List[T]) RemoveAfter(c *Cursor[T]) *node[T] {
 	if c.list != l || l.root.prev == c.current {
 		return nil
 	}
@@ -307,7 +282,7 @@ func (l *List[T]) RemoveAfter(c *Cursor[T]) *Node[T] {
 // If c is point to the sentinel node, RemoveBefore removes the last element of the list (same effect as RemoveBack).
 // If c is not associated with l, RemoveBefore returns nil.
 // The complexity is O(1).
-func (l *List[T]) RemoveBefore(c *Cursor[T]) *Node[T] {
+func (l *List[T]) RemoveBefore(c *Cursor[T]) *node[T] {
 
 	if c.list != l || l.root.next == c.current {
 		return nil
@@ -393,10 +368,10 @@ func (l *List[T]) BackCursor() *Cursor[T] {
 // PushBackList inserts a copy of an `other` list at the back of `l`.
 func (l *List[T]) PushBackList(other *List[T]) {
 	l.lazyInit()
-	back := other.BackCursor().Node()
+	back := other.BackCursor().node()
 
-	other.Cursor().WalkAscending(func(n *Node[T]) bool {
-		l.insertValue(n.Value, l.root.prev)
+	other.Cursor().WalkAscending(func(n *node[T]) bool {
+		l.insertValue(n.value, l.root.prev)
 		if n == back {
 			return false
 		}
@@ -407,11 +382,11 @@ func (l *List[T]) PushBackList(other *List[T]) {
 // PushFrontList inserts a copy of an `other` list at the front of `l`.
 func (l *List[T]) PushFrontList(other *List[T]) {
 	l.lazyInit()
-	front := other.FrontCursor().Node()
+	front := other.FrontCursor().node()
 
-	other.Cursor().WalkDescending(func(n *Node[T]) bool {
+	other.Cursor().WalkDescending(func(n *node[T]) bool {
 
-		l.insertValue(n.Value, &l.root)
+		l.insertValue(n.value, &l.root)
 		if n == front {
 			return false
 		}

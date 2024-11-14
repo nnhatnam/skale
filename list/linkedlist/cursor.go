@@ -3,7 +3,7 @@ package linkedlist
 // Cursor is a read-only object that points to a node in a list. It contains a reference to the list and the node it's currently pointing to.
 type Cursor[T any] struct {
 	list    *List[T]
-	current *Node[T]
+	current *node[T]
 }
 
 // Equal returns true if the two cursors point to the same node in the same list.
@@ -14,6 +14,15 @@ func (c *Cursor[T]) Equal(c2 *Cursor[T]) bool {
 	}
 
 	return c.list == c2.list && c.current == c2.current
+}
+
+// Value returns the value of the node that the cursor points to.
+// If the cursor is not valid, it will panic.
+func (c *Cursor[T]) Value() T {
+	if !c.IsValid() {
+		panic("cursor is not valid when calling Value()")
+	}
+	return c.current.value
 }
 
 // Clone creates a new cursor that points to the same node as the current cursor.
@@ -49,26 +58,26 @@ func (c *Cursor[T]) ClonePrev() *Cursor[T] {
 	return nil // invalid cursor
 }
 
-// Node returns the node that the cursor points to.
-func (c *Cursor[T]) Node() *Node[T] {
+// node returns the node that the cursor points to.
+func (c *Cursor[T]) node() *node[T] {
 	if c.current != &c.list.root && c.IsValid() {
 		return c.current
 	}
 	return nil
 }
 
-// NodeNext returns the node after the node the cursor is currently pointing to.
+// nodeNext returns the node after the node the cursor is currently pointing to.
 // Return nil if the cursor is pointing to the last node in the list.
-func (c *Cursor[T]) NodeNext() *Node[T] {
+func (c *Cursor[T]) nodeNext() *node[T] {
 	if c.current.next != &c.list.root && c.IsValid() {
 		return c.current.next
 	}
 	return nil
 }
 
-// NodePrev returns the node before the node the cursor is currently pointing to.
+// nodePrev returns the node before the node the cursor is currently pointing to.
 // Return nil if the cursor is pointing to the first node in the list.
-func (c *Cursor[T]) NodePrev() *Node[T] {
+func (c *Cursor[T]) nodePrev() *node[T] {
 	if c.current.prev != &c.list.root && c.IsValid() {
 		return c.current.prev
 	}
@@ -77,7 +86,7 @@ func (c *Cursor[T]) NodePrev() *Node[T] {
 
 // MoveNext moves the cursor to the next node in the list and return the node.
 // Move to sentinel node and return nil if the cursor is pointing to the last node in the list.
-func (c *Cursor[T]) MoveNext() *Node[T] {
+func (c *Cursor[T]) MoveNext() *node[T] {
 
 	c.current = c.current.next
 	if c.current == &c.list.root {
@@ -88,7 +97,7 @@ func (c *Cursor[T]) MoveNext() *Node[T] {
 
 // MovePrev moves the cursor to the previous node in the list and return the node.
 // Move to sentinel node and return nil if the cursor is pointing to the first node in the list.
-func (c *Cursor[T]) MovePrev() *Node[T] {
+func (c *Cursor[T]) MovePrev() *node[T] {
 
 	c.current = c.current.prev
 	if c.current == &c.list.root {
@@ -127,7 +136,7 @@ func (c *Cursor[T]) MoveToBack() bool {
 
 // WalkAscending moves the cursor to the next node in the list and call the function f with the node.
 // Keep walking until f returns false or the cursor reach the sentinel node.
-func (c *Cursor[T]) WalkAscending(f func(n *Node[T]) bool) {
+func (c *Cursor[T]) WalkAscending(f func(n *node[T]) bool) {
 	if c.list.len > 0 && c.IsValid() {
 
 		if c.current != &c.list.root {
@@ -146,7 +155,7 @@ func (c *Cursor[T]) WalkAscending(f func(n *Node[T]) bool) {
 
 // WalkDescending moves the cursor to the previous node in the list and call the function f with the node.
 // Keep walking until f returns false or the cursor reach the sentinel node.
-func (c *Cursor[T]) WalkDescending(f func(n *Node[T]) bool) {
+func (c *Cursor[T]) WalkDescending(f func(n *node[T]) bool) {
 	if c.list.len > 0 && c.IsValid() {
 
 		if c.current != &c.list.root {
