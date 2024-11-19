@@ -5,27 +5,27 @@
 // To iterate over a list (where l is a *List):
 //
 //	cursor := l.Cursor() // create a cursor point to first node
-//	for n := cursor.MoveNext(); n != nil; n = cursor.MoveNext() {
-//		// do something with n
+//	for cursor.MoveNext() {
+//		v := cursor.Value()
+//		// do something with v
 //	}
 //
-// Another way to iterate over a list:
+// A better way to iterate over a list:
 //
 //	cursor := l.Cursor() // create a cursor point to the sentinel node
-//	for cursor.MoveNext() != nil {
-//		n := cursor.node()
-//		// do something with n
-//	}
+//	cursor.WalkAscending(func(v T) bool {
+//		// do something with v
+//		return true
+//	})
 package linkedlist
 
 // node is a node in a doubly linked list
 type node[T any] struct {
 	next, prev *node[T]
-
-	value T
+	value      T
 }
 
-// Newnode creates a new node with the given value
+// newNode creates a new node with the given value
 func newNode[T any](value T) *node[T] {
 	return &node[T]{value: value}
 }
@@ -41,11 +41,10 @@ func New[T any]() *List[T] {
 	l := &List[T]{}
 	l.root.next = &l.root
 	l.root.prev = &l.root
-	l.len = 0
 	return l
 }
 
-// Init initializes or clears list l.
+// Init resets the list to an empty state
 func (l *List[T]) Init() *List[T] {
 	l.root.next = &l.root
 	l.root.prev = &l.root
@@ -53,12 +52,8 @@ func (l *List[T]) Init() *List[T] {
 	return l
 }
 
-// lazyInit lazily initializes a zero List value.
-func (l *List[T]) lazyInit() {
-	if l.root.next == nil {
-		l.Init()
-	}
-}
+// isEmpty checks if the list is empty.
+func (l *List[T]) isEmpty() bool { return l.len == 0 }
 
 // first returns the first node in the list
 func (l *List[T]) front() *node[T] {
@@ -119,8 +114,7 @@ func (l *List[T]) remove(n *node[T]) *node[T] {
 
 	//node after n is now after n.prev
 	n.next.prev = n.prev
-	n.next = nil // avoid memory leaks
-	n.prev = nil // avoid memory leaks
+	n.next, n.prev = nil, nil // Avoid memory leaks
 	l.len--
 	return n
 }
@@ -135,81 +129,59 @@ func From[T any](values ...T) *List[T] {
 }
 
 // Len returns the number of elements of list l. The complexity is O(1).
-func (l *List[T]) Len() int {
-	return l.len
+func (l *List[T]) Len() int { return l.len }
+
+// Front returns the value of the first element or zero value if empty.
+// The complexity is O(1).
+func (l *List[T]) Front() (T, bool) {
+	if l.isEmpty() {
+		var zero T
+		return zero, false
+	}
+	return l.root.next.value, true
 }
 
-// Front returns the first element of list l. Return nil if the list is empty.
+// Back returns the value of the last element or zero value if empty.
 // The complexity is O(1).
-func (l *List[T]) Front() *node[T] {
-	return l.front()
-}
-
-// Back returns the last element of list l. Return nil if the list is empty.
-// The complexity is O(1).
-func (l *List[T]) Back() *node[T] {
-	return l.back()
+func (l *List[T]) Back() (T, bool) {
+	if l.isEmpty() {
+		var zero T
+		return zero, false
+	}
+	return l.root.prev.value, true
 }
 
 // PushBack inserts a new value v at the back of list l.
 // The complexity is O(1).
 func (l *List[T]) PushBack(v T) {
-	l.lazyInit()
 	l.insertValue(v, l.root.prev)
-}
-
-// PushBackBulk inserts given values at the back of list l. PushBackBulk is slightly cheaper than calling PushBack in a loop.
-// The complexity is O(len(values)).
-func (l *List[T]) PushBackBulk(values ...T) {
-	l.lazyInit()
-	for _, v := range values {
-		l.insertValue(v, l.root.prev)
-	}
 }
 
 // PushFront inserts a new value v at the front of list l.
 // The complexity is O(1).
 func (l *List[T]) PushFront(v T) {
-	l.lazyInit()
 	l.insertValue(v, &l.root)
-}
-
-// PushFrontBulk inserts given values at the front of list l. PushFrontBulk is slightly cheaper than calling PushFront in a loop.
-// The complexity is O(len(values)).
-func (l *List[T]) PushFrontBulk(values ...T) {
-	l.lazyInit()
-	for _, v := range values {
-		l.insertValue(v, &l.root)
-	}
 }
 
 // PopFront removes the first element (front) from list l and returns it. Return nil if the list is empty.
 // The complexity is O(1).
-func (l *List[T]) PopFront() *node[T] {
-	l.lazyInit()
+func (l *List[T]) PopFront() (T, bool) {
 
-	n := l.front()
-	if n != nil {
-		return l.remove(n)
+	if l.isEmpty() {
+		var zero T
+		return zero, false
 	}
-	return nil
-
+	return l.remove(l.root.next).value, true
 }
 
 // PopBack removes the last element (back) from list l and returns it. Return nil if the list is empty.
 // The complexity is O(1).
-func (l *List[T]) PopBack() *node[T] {
-	l.lazyInit()
-
-	if l.len == 0 {
-		return nil
+func (l *List[T]) PopBack() (T, bool) {
+	if l.isEmpty() {
+		var zero T
+		return zero, false
 	}
-	n := l.back()
-	if n != nil {
-		return l.remove(n)
-	}
-
-	return nil
+	return l.remove(l.root.prev).value, true
 
 }
 
@@ -217,64 +189,70 @@ func (l *List[T]) PopBack() *node[T] {
 // If c is point to the sentinel node, InsertBefore inserts to the tail (same effect as PushBack).
 // If c is not associated with l, InsertBefore returns nil.
 // The complexity is O(1).
-func (l *List[T]) InsertBefore(v T, c *Cursor[T]) *node[T] {
+func (l *List[T]) InsertBefore(v T, c *Cursor[T]) {
 	if c.list != l || c.current == &c.list.root {
-		return nil
+		return
 	}
 	if c.IsValid() {
-		return c.list.insertValue(v, c.current.prev)
+		c.list.insertValue(v, c.current.prev)
 	}
 
-	return nil
 }
 
-// InsertAfter inserts a new value v after the cursor c, return the new node. cursor c stays at the same position after the insertion.
+// InsertAfter inserts a new value v after the cursor c, cursor c stays at the same position after the insertion.
 // If c is point to the sentinel node, InsertAfter inserts to the head (same effect as PushFront).
 // If c is not associated with l or invalid, InsertAfter returns nil.
 // The complexity is O(1).
-func (l *List[T]) InsertAfter(v T, c *Cursor[T]) *node[T] {
+func (l *List[T]) InsertAfter(v T, c *Cursor[T]) bool {
 	if c.list != l || c.current == &c.list.root {
-		return nil
+		return false
+
 	}
 	if c.IsValid() {
-		return c.list.insertValue(v, c.current)
+		c.list.insertValue(v, c.current)
+		return true
 	}
 
-	return nil
+	return false
+
 }
 
 // RemoveAt removes the node at the cursor c, return the removed node. Cursor c move to the next node after the removal.
 // If c is point to the sentinel node, RemoveAt returns nil.
-func (l *List[T]) RemoveAt(c *Cursor[T]) *node[T] {
+func (l *List[T]) RemoveAt(c *Cursor[T]) T {
 
+	var zero T
 	if c.list != l || c.current == &c.list.root {
-		return nil
+		return zero
 	}
 
 	if c.IsValid() {
 		n := c.current
 		c.current = c.current.next
 		c.list.remove(n)
-		return n
+		return n.value
 	}
 
-	return nil
+	return zero
 }
 
 // RemoveAfter removes the node after the cursor c, return the removed node. Cursor c stays at the same position after the removal.
 // If c is point to the sentinel node, RemoveAfter removes the first element of the list (same effect as RemoveFront).
 // If c is not associated with l, RemoveAfter returns nil.
 // The complexity is O(1).
-func (l *List[T]) RemoveAfter(c *Cursor[T]) *node[T] {
+func (l *List[T]) RemoveAfter(c *Cursor[T]) T {
+	var zero T
 	if c.list != l || l.root.prev == c.current {
-		return nil
+		return zero
 	}
 
 	if c.IsValid() {
-		return c.list.remove(c.current.next)
+		n := c.current.next
+		c.list.remove(n)
+		return n.value
 	}
 
-	return nil
+	return zero
 
 }
 
@@ -282,16 +260,19 @@ func (l *List[T]) RemoveAfter(c *Cursor[T]) *node[T] {
 // If c is point to the sentinel node, RemoveBefore removes the last element of the list (same effect as RemoveBack).
 // If c is not associated with l, RemoveBefore returns nil.
 // The complexity is O(1).
-func (l *List[T]) RemoveBefore(c *Cursor[T]) *node[T] {
-
+func (l *List[T]) RemoveBefore(c *Cursor[T]) T {
+	var zero T
 	if c.list != l || l.root.next == c.current {
-		return nil
+		return zero
 	}
 
 	if c.IsValid() {
-		return c.list.remove(c.current.prev)
+		n := c.current.prev
+		c.list.remove(n)
+		return n.value
 	}
-	return nil
+
+	return zero
 }
 
 // MoveToFront moves the node at the cursor c to the front of the list.
@@ -351,7 +332,6 @@ func (l *List[T]) MoveAfter(c, mark *Cursor[T]) {
 
 // Cursor returns a cursor pointing to the sentinel node of the list.
 func (l *List[T]) Cursor() *Cursor[T] {
-	l.lazyInit()
 	return &Cursor[T]{list: l, current: &l.root}
 }
 
@@ -367,29 +347,17 @@ func (l *List[T]) BackCursor() *Cursor[T] {
 
 // PushBackList inserts a copy of an `other` list at the back of `l`.
 func (l *List[T]) PushBackList(other *List[T]) {
-	l.lazyInit()
-	back := other.BackCursor().node()
 
-	other.Cursor().WalkAscending(func(n *node[T]) bool {
-		l.insertValue(n.value, l.root.prev)
-		if n == back {
-			return false
-		}
+	other.Cursor().WalkAscending(func(v T) bool {
+		l.insertValue(v, l.root.prev)
 		return true
 	})
 }
 
 // PushFrontList inserts a copy of an `other` list at the front of `l`.
 func (l *List[T]) PushFrontList(other *List[T]) {
-	l.lazyInit()
-	front := other.FrontCursor().node()
-
-	other.Cursor().WalkDescending(func(n *node[T]) bool {
-
-		l.insertValue(n.value, &l.root)
-		if n == front {
-			return false
-		}
+	other.Cursor().WalkDescending(func(v T) bool {
+		l.insertValue(v, &l.root)
 		return true
 	})
 }

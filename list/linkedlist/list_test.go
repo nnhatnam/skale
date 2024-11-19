@@ -7,12 +7,14 @@ import (
 
 func traverse[T any](t *testing.T, l *List[T]) {
 	c := l.Cursor()
-	for c.MoveNext() != nil {
-		t.Logf("%v", c.Node().Value)
-	}
+	c.WalkDescending(func(v T) bool {
+		t.Logf("%v", v)
+		return true
+	})
+
 }
 
-func debugPrinter[T any](n1, n2 string, es []*Node[T]) {
+func debugPrinter[T any](n1, n2 string, es []*node[T]) {
 	fmt.Printf("%v -> %v is: [%p](%v) -> [%p](%v)\n", n1, n2, es[0], *es[0], es[1], *es[1])
 }
 
@@ -24,7 +26,7 @@ func checkListLen[T any](t *testing.T, l *List[T], len int) bool {
 	return true
 }
 
-func checkListPointers[T any](t *testing.T, l *List[T], es []*Node[T]) {
+func checkListPointers[T any](t *testing.T, l *List[T], es []*node[T]) {
 
 	root := &l.root
 	if !checkListLen(t, l, len(es)) {
@@ -43,7 +45,7 @@ func checkListPointers[T any](t *testing.T, l *List[T], es []*Node[T]) {
 	//check internal and external prev/next connections
 	for i, e := range es {
 		prev := root
-		Prev := (*Node[T])(nil)
+		Prev := (*node[T])(nil)
 		if i > 0 {
 			prev = es[i-1]
 			Prev = prev
@@ -57,7 +59,7 @@ func checkListPointers[T any](t *testing.T, l *List[T], es []*Node[T]) {
 		}
 
 		next := root
-		Next := (*Node[T])(nil)
+		Next := (*node[T])(nil)
 		if i < len(es)-1 {
 			next = es[i+1]
 			Next = next
@@ -78,9 +80,9 @@ func checkList[T comparable](t *testing.T, l *List[T], es []T) {
 
 	i := 0
 	for e := l.front(); e != &l.root; e = e.next {
-		le := e.Value
+		le := e.value
 		if le != es[i] {
-			t.Errorf("elt[%d].Value = %v, want %v", i, le, es[i])
+			t.Errorf("elt[%d].value = %v, want %v", i, le, es[i])
 		}
 		i++
 	}
@@ -96,12 +98,12 @@ func TestNew(t *testing.T) {
 		t.Errorf("l.Len() = %d, want 0", l.Len())
 	}
 
-	if l.Front() != nil {
-		t.Errorf("l.Front() = %v, want nil", l.Front())
+	if v, ok := l.Front(); ok {
+		t.Errorf("l.Front() = %v, %v, want false", v, ok)
 	}
 
-	if l.Back() != nil {
-		t.Errorf("l.Back() = %v, want nil", l.Back())
+	if v, ok := l.Back(); ok {
+		t.Errorf("l.Back() = %v, %v, want false", v, ok)
 	}
 
 }
@@ -118,12 +120,12 @@ func TestFrom(t *testing.T) {
 		t.Errorf("l.Len() = %d, want 5", l.Len())
 	}
 
-	if l.Front().Value != 1 {
-		t.Errorf("l.Front() = %v, want 1", l.Front())
+	if v, ok := l.Front(); v != 1 || !ok {
+		t.Errorf("l.Front() = %v, %v, want 1, true", v, ok)
 	}
 
-	if l.Back().Value != 5 {
-		t.Errorf("l.Back() = %v, want 5", l.Back())
+	if v, ok := l.Back(); v != 5 || !ok {
+		t.Errorf("l.Back() = %v, %v, want 5, true", v, ok)
 	}
 
 }
@@ -131,20 +133,20 @@ func TestFrom(t *testing.T) {
 func TestList(t *testing.T) {
 
 	l := New[any]()
-	//checkListPointers(t, l, []*Node[any]{})
+	//checkListPointers(t, l, []*node[any]{})
 
 	// Single Node linked list
 	l.PushFront("a")
 
 	e := l.FrontCursor()
 
-	checkListPointers(t, l, []*Node[any]{e.Node()})
+	checkListPointers(t, l, []*node[any]{e.current})
 	l.MoveToFront(e)
-	checkListPointers(t, l, []*Node[any]{e.Node()})
+	checkListPointers(t, l, []*node[any]{e.current})
 	l.MoveToBack(e)
-	checkListPointers(t, l, []*Node[any]{e.Node()})
+	checkListPointers(t, l, []*node[any]{e.current})
 	l.RemoveAt(e)
-	checkListPointers(t, l, []*Node[any]{})
+	checkListPointers(t, l, []*node[any]{})
 
 	// Bigger linked list
 	l.PushFront(2)
@@ -155,61 +157,61 @@ func TestList(t *testing.T) {
 	e3 := l.BackCursor()
 	l.PushBack("banana")
 	e4 := l.BackCursor()
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e2.Node(), e3.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e2.current, e3.current, e4.current})
 
 	l.RemoveAt(e2)
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e3.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e3.current, e4.current})
 
 	l.MoveToFront(e3) // move from middle
-	checkListPointers(t, l, []*Node[any]{e3.Node(), e1.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[any]{e3.current, e1.current, e4.current})
 
 	l.MoveToFront(e1)
 	l.MoveToBack(e3) // move from middle
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e4.current, e3.current})
 
 	l.MoveToFront(e3) // move from back
-	checkListPointers(t, l, []*Node[any]{e3.Node(), e1.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[any]{e3.current, e1.current, e4.current})
 	l.MoveToFront(e3) // should be no-op
-	checkListPointers(t, l, []*Node[any]{e3.Node(), e1.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[any]{e3.current, e1.current, e4.current})
 
 	l.MoveToBack(e3) // move from front
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e4.current, e3.current})
 	l.MoveToBack(e3) // should be no-op
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e4.current, e3.current})
 
 	l.InsertBefore(2, e1) // insert before front
 	e2 = e1.ClonePrev()
-	checkListPointers(t, l, []*Node[any]{e2.Node(), e1.Node(), e4.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e2.current, e1.current, e4.current, e3.current})
 
 	l.RemoveAt(e2)
 	l.InsertBefore(2, e4) // insert before middle
 	e2 = e4.ClonePrev()
 
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e2.Node(), e4.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e2.current, e4.current, e3.current})
 	l.RemoveAt(e2)
 	l.InsertBefore(2, e3) // insert before back
 	e2 = e3.ClonePrev()
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e2.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e4.current, e2.current, e3.current})
 	l.RemoveAt(e2)
 
 	l.InsertAfter(2, e1) // insert after front
 	e2 = e1.CloneNext()
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e2.Node(), e4.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e2.current, e4.current, e3.current})
 	l.RemoveAt(e2)
 	l.InsertAfter(2, e4) // insert after middle
 	e2 = e4.CloneNext()
 
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e2.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e4.current, e2.current, e3.current})
 	l.RemoveAt(e2)
 	l.InsertAfter(2, e3) // insert after back
 	e2 = e3.CloneNext()
-	checkListPointers(t, l, []*Node[any]{e1.Node(), e4.Node(), e3.Node(), e2.Node()})
+	checkListPointers(t, l, []*node[any]{e1.current, e4.current, e3.current, e2.current})
 	l.RemoveAt(e2)
 
 	// Check standard iteration.
 	sum := 0
-	l.Cursor().WalkAscending(func(n *Node[any]) bool {
-		if i, ok := n.Value.(int); ok {
+	l.Cursor().WalkAscending(func(v any) bool {
+		if i, ok := v.(int); ok {
 			sum += i
 		}
 		return true
@@ -224,7 +226,7 @@ func TestList(t *testing.T) {
 	for l.RemoveAfter(c) != nil {
 	}
 
-	checkListPointers(t, l, []*Node[any]{})
+	checkListPointers(t, l, []*node[any]{})
 }
 
 func TestExtendingV2(t *testing.T) {
@@ -305,14 +307,14 @@ func TestRemoveV2(t *testing.T) {
 	e1 := l.BackCursor()
 	l.PushBack(2)
 	e2 := l.BackCursor()
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e2.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e2.current})
 
 	e := l.FrontCursor()
 	l.RemoveAt(e) // e moves to next element
-	checkListPointers(t, l, []*Node[int]{e2.Node()})
+	checkListPointers(t, l, []*node[int]{e2.current})
 
 	l.RemoveAt(e) // e moves to "dummy" element
-	checkListPointers(t, l, []*Node[int]{})
+	checkListPointers(t, l, []*node[int]{})
 
 }
 
@@ -323,14 +325,14 @@ func TestIssue6349V2(t *testing.T) {
 
 	e := l.FrontCursor()
 	l.RemoveAt(e)
-	if e.Node().Value != 2 {
-		t.Errorf("e.value = %d, want 1", e.Node().Value)
+	if e.current.value != 2 {
+		t.Errorf("e.value = %d, want 1", e.current.value)
 	}
-	if e.NodeNext() != nil {
-		t.Errorf("e.Next() != nil")
+	if e.current.next != nil {
+		t.Errorf("e.current.next != nil")
 	}
-	if e.NodePrev() != nil {
-		t.Errorf("e.Prev() != nil")
+	if e.current.prev != nil {
+		t.Errorf("e.current.prev != nil")
 	}
 }
 
@@ -346,29 +348,29 @@ func TestMoveV2(t *testing.T) {
 	e4 := l.BackCursor()
 
 	l.MoveAfter(e3, e3)
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e2.Node(), e3.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e2.current, e3.current, e4.current})
 	l.MoveBefore(e2, e2)
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e2.Node(), e3.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e2.current, e3.current, e4.current})
 
 	l.MoveAfter(e3, e2)
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e2.Node(), e3.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e2.current, e3.current, e4.current})
 	l.MoveBefore(e2, e3)
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e2.Node(), e3.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e2.current, e3.current, e4.current})
 
 	l.MoveBefore(e2, e4)
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e3.Node(), e2.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e3.current, e2.current, e4.current})
 	e2, e3 = e3, e2
 
 	l.MoveBefore(e4, e1)
-	checkListPointers(t, l, []*Node[int]{e4.Node(), e1.Node(), e2.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[int]{e4.current, e1.current, e2.current, e3.current})
 	e1, e2, e3, e4 = e4, e1, e2, e3
 
 	l.MoveAfter(e4, e1)
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e4.Node(), e2.Node(), e3.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e4.current, e2.current, e3.current})
 	e2, e3, e4 = e4, e2, e3
 
 	l.MoveAfter(e2, e3)
-	checkListPointers(t, l, []*Node[int]{e1.Node(), e3.Node(), e2.Node(), e4.Node()})
+	checkListPointers(t, l, []*node[int]{e1.current, e3.current, e2.current, e4.current})
 }
 
 func TestZeroListV2(t *testing.T) {
@@ -433,64 +435,65 @@ func TestPopFront(t *testing.T) {
 
 	fmt.Println(l.PopFront())
 
-	if n := l.PopFront(); n != nil {
-		t.Errorf("PopFront() = %v, want nil", n)
+	if v, ok := l.PopFront(); !ok || v != 0 {
+		t.Errorf("PopFront() = %v, %v, want 0, false", v, ok)
 	}
 
 	l = New[int]()
-	if n := l.PopFront(); n != nil {
-		t.Errorf("PopFront() = %v, want nil", n)
+
+	if v, ok := l.PopFront(); !ok || v != 0 {
+		t.Errorf("PopFront() = %v, %v, want 0, false", v, ok)
 	}
 
 	l.PushBack(1)
-	if n := l.PopFront(); n.Value != 1 {
-		t.Errorf("PopFront() = %v, want 1", n)
+	if v, ok := l.PopFront(); !ok || v != 1 {
+		t.Errorf("PopFront() = %v, %v, want 1, true", v, ok)
 	}
 
 	l.PushBack(1)
 	l.PushBack(2)
-	if n := l.PopFront(); n.Value != 1 {
-		t.Errorf("PopFront() = %v, want 1", n)
+	if v, ok := l.PopFront(); !ok || v != 1 {
+		t.Errorf("PopFront() = %v, %v, want 1, true", v, ok)
 	}
 
-	if n := l.PopFront(); n.Value != 2 {
-		t.Errorf("PopFront() = %v, want 2", n)
+	if v, ok := l.PopFront(); !ok || v != 2 {
+		t.Errorf("PopFront() = %v, %v, want 2, true", v, ok)
 	}
 
-	if n := l.PopFront(); n != nil {
-		t.Errorf("PopFront() = %v, want nil", n)
+	if v, ok := l.PopFront(); !ok || v != 0 {
+		t.Errorf("PopFront() = %v, %v, want 0, false", v, ok)
 	}
 }
 
 func TestPopBack(t *testing.T) {
 
 	var l = &List[int]{}
-	if n := l.PopBack(); n != nil {
-		t.Errorf("PopBack() = %v, want nil", n)
+	if v, ok := l.PopBack(); !ok || v != 0 {
+		t.Errorf("PopBack() = %v, %v, want 0, false", v, ok)
 	}
 
 	l = New[int]()
-	if n := l.PopBack(); n != nil {
-		t.Errorf("PopBack() = %v, want nil", n)
+	if v, ok := l.PopBack(); !ok || v != 0 {
+		t.Errorf("PopBack() = %v, %v, want 0, false", v, ok)
 	}
 
 	l.PushBack(1)
-	if n := l.PopBack(); n.Value != 1 {
-		t.Errorf("PopBack() = %v, want 1", n)
+	if v, ok := l.PopBack(); !ok || v != 1 {
+		t.Errorf("PopBack() = %v, %v, want 1, true", v, ok)
 	}
 
 	l.PushBack(1)
 	l.PushBack(2)
 
-	if n := l.PopBack(); n.Value != 2 {
-		t.Errorf("PopBack() = %v, want 2", n)
+	if v, ok := l.PopBack(); !ok || v != 2 {
+		t.Errorf("PopBack() = %v, %v, want 2, true", v, ok)
 	}
 
-	if n := l.PopBack(); n.Value != 1 {
-		t.Errorf("PopBack() = %v, want 1", n)
+	if v, ok := l.PopBack(); !ok || v != 1 {
+		t.Errorf("PopBack() = %v, %v, want 1, true", v, ok)
 	}
 
-	if n := l.PopBack(); n != nil {
-		t.Errorf("PopBack() = %v, want nil", n)
+	if v, ok := l.PopBack(); !ok || v != 0 {
+		t.Errorf("PopBack() = %v, %v, want 0, false", v, ok)
 	}
 }

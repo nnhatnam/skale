@@ -6,32 +6,22 @@ type Cursor[T any] struct {
 	current *node[T]
 }
 
-// Equal returns true if the two cursors point to the same node in the same list.
-// if either cursor is not valid, it returns false.
-func (c *Cursor[T]) Equal(c2 *Cursor[T]) bool {
-	if !c.IsValid() || !c2.IsValid() {
-		return false
-	}
-
-	return c.list == c2.list && c.current == c2.current
-}
-
-// Value returns the value of the node that the cursor points to.
-// If the cursor is not valid, it will panic.
-func (c *Cursor[T]) Value() T {
+// Value returns the value of the current node if valid.
+func (c *Cursor[T]) Value() (T, bool) {
 	if !c.IsValid() {
-		panic("cursor is not valid when calling Value()")
+		var zero T
+		return zero, false
 	}
-	return c.current.value
+	return c.current.value, true
 }
 
 // Clone creates a new cursor that points to the same node as the current cursor.
 // Return nil if the current cursor is not valid.
 func (c *Cursor[T]) Clone() *Cursor[T] {
-	if c.IsValid() {
-		return &Cursor[T]{list: c.list, current: c.current}
+	if !c.IsValid() {
+		return nil
 	}
-	return nil
+	return &Cursor[T]{list: c.list, current: c.current}
 }
 
 // CloneNext creates a new cursor that points to the next node in the list.
@@ -58,123 +48,113 @@ func (c *Cursor[T]) ClonePrev() *Cursor[T] {
 	return nil // invalid cursor
 }
 
-// node returns the node that the cursor points to.
-func (c *Cursor[T]) node() *node[T] {
-	if c.current != &c.list.root && c.IsValid() {
-		return c.current
-	}
-	return nil
-}
+// MoveNext advances the cursor to the next node and return true for each successful move.
+// Calling MoveNext at the end of the list will return false and move the cursor to the sentinel node.
+// Calling MoveNext on an invalid cursor will return false.
+func (c *Cursor[T]) MoveNext() bool {
 
-// nodeNext returns the node after the node the cursor is currently pointing to.
-// Return nil if the cursor is pointing to the last node in the list.
-func (c *Cursor[T]) nodeNext() *node[T] {
-	if c.current.next != &c.list.root && c.IsValid() {
-		return c.current.next
+	if !c.IsValid() {
+		return false
 	}
-	return nil
-}
-
-// nodePrev returns the node before the node the cursor is currently pointing to.
-// Return nil if the cursor is pointing to the first node in the list.
-func (c *Cursor[T]) nodePrev() *node[T] {
-	if c.current.prev != &c.list.root && c.IsValid() {
-		return c.current.prev
-	}
-	return nil
-}
-
-// MoveNext moves the cursor to the next node in the list and return the node.
-// Move to sentinel node and return nil if the cursor is pointing to the last node in the list.
-func (c *Cursor[T]) MoveNext() *node[T] {
 
 	c.current = c.current.next
-	if c.current == &c.list.root {
-		return nil
-	}
-	return c.current
+	return c.current != &c.list.root
+
 }
 
-// MovePrev moves the cursor to the previous node in the list and return the node.
-// Move to sentinel node and return nil if the cursor is pointing to the first node in the list.
-func (c *Cursor[T]) MovePrev() *node[T] {
+// MovePrev moves the cursor to the previous node and return true for each successful move.
+// Calling MovePrev at the beginning of the list will return false and move the cursor to the sentinel node.
+// Calling MovePrev on an invalid cursor will return false.
+func (c *Cursor[T]) MovePrev() bool {
+
+	if !c.IsValid() {
+		return false
+	}
 
 	c.current = c.current.prev
-	if c.current == &c.list.root {
-		return nil
-	}
-	return c.current
+	return c.current != &c.list.root
+
 }
 
 // MoveToFront moves the valid cursor to the first node in the list. If the list is empty or the cursor is invalid, return false.
 func (c *Cursor[T]) MoveToFront() bool {
-	if c.list.len == 0 {
+	if c.list.isEmpty() {
 		return false
 	}
 
-	if c.IsValid() {
-		c.current = c.list.root.next
-		return true
-	}
-
-	return false
+	c.current = c.list.root.next
+	return true
 }
 
 // MoveToBack moves the valid cursor to the last node in the list. If the list is empty or the cursor is invalid, return false.
 func (c *Cursor[T]) MoveToBack() bool {
-	if c.list.len == 0 {
+	if c.list.isEmpty() {
 		return false
 	}
-
-	if c.IsValid() {
-		c.current = c.list.root.prev
-		return true
-	}
-
-	return false
+	c.current = c.list.root.prev
+	return true
 }
 
-// WalkAscending moves the cursor to the next node in the list and call the function f with the node.
-// Keep walking until f returns false or the cursor reach the sentinel node.
-func (c *Cursor[T]) WalkAscending(f func(n *node[T]) bool) {
-	if c.list.len > 0 && c.IsValid() {
+// WalkAscending moves the cursor to the next node in the list and calls the function f with the node.
+// It continues until f returns false or the cursor reaches the sentinel node.
+func (c *Cursor[T]) WalkAscending(f func(v T) bool) {
 
-		if c.current != &c.list.root {
-			if !f(c.current) {
-				return
-			}
+	if c.list.len == 0 || !c.IsValid() {
+		return // Early exit for empty list or invalid cursor
+	}
+
+	if c.current == &c.list.root {
+		c.current = c.current.next
+	}
+
+	for {
+
+		// Stop if we reach the sentinel node
+		if c.current == &c.list.root {
+			return
 		}
 
-		for c.MoveNext() != nil {
-			if !f(c.current) {
-				return
-			}
+		// Call the function with the current node
+		if !f(c.current.value) {
+			return // Stop walking if f returns false
 		}
+
+		// Move to the next node
+		c.current = c.current.next
 	}
 }
 
 // WalkDescending moves the cursor to the previous node in the list and call the function f with the node.
-// Keep walking until f returns false or the cursor reach the sentinel node.
-func (c *Cursor[T]) WalkDescending(f func(n *node[T]) bool) {
-	if c.list.len > 0 && c.IsValid() {
+// Keep walking until f returns false or the cursor reach the head of the list.
+func (c *Cursor[T]) WalkDescending(f func(v T) bool) {
 
-		if c.current != &c.list.root {
-			if !f(c.current) {
-				return
-			}
-		}
-
-		for c.MovePrev() != nil {
-			if !f(c.current) {
-				return
-			}
-		}
-
+	if c.list.len == 0 || !c.IsValid() {
+		return // Early exit for empty list or invalid cursor
 	}
 
+	if c.current == &c.list.root {
+		c.current = c.current.prev
+	}
+
+	for {
+
+		// Stop if we reach the head of the list
+		if c.current == &c.list.root {
+			return
+		}
+
+		// Call the function with the current node
+		if !f(c.current.value) {
+			return // Stop walking if f returns false
+		}
+
+		// Move to the previous node
+		c.current = c.current.prev
+
+	}
 }
 
-// Close closes the cursor and release the reference to the list. The cursor can no longer be used.
+// Close releases the cursor's reference to the list. The cursor can no longer be used.
 // defer cursor.Close() is recommended.
 func (c *Cursor[T]) Close() {
 	c.list = nil
@@ -183,11 +163,20 @@ func (c *Cursor[T]) Close() {
 
 // IsValid detects if the cursor is valid.
 // A cursor is not valid if it is closed, or it is pointing to a node that no longer exists.
-// If the cursor is not valid, Close() will be called automatically.
 func (c *Cursor[T]) IsValid() bool {
-	if c.list == nil || c.current == nil || c.current.next == nil {
+	// Invalid happens in two cases:
+	// 1. The cursor has no reference to the list or the node.
+	// 2. The cursor is pointing to a node that has been removed from the list.
+	// Note that a cursor pointing to the sentinel node (root cursor) is still valid.
+
+	if c.list == nil || c.current == nil {
+		// Case 1
+		return false
+	} else if c.current.next == nil {
+		// Case 2
 		c.Close()
 		return false
 	}
+
 	return true
 }

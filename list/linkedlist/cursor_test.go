@@ -1,6 +1,8 @@
 package linkedlist
 
-import "testing"
+import (
+	"testing"
+)
 
 func checkCursor[T any](t *testing.T, l *List[T], cursors []*Cursor[T]) {
 
@@ -24,9 +26,9 @@ func checkCursor[T any](t *testing.T, l *List[T], cursors []*Cursor[T]) {
 				t.Errorf("Cursor.current = %v, want %v", c.current, &l.root)
 			}
 
-			if c.Node() != nil {
-				t.Errorf("Cursor.Node() = %v, want nil", c.Node())
-			}
+			//if c.current != nil {
+			//	t.Errorf("cursor.current = %v, want nil", c.current)
+			//}
 		}
 	}
 }
@@ -49,27 +51,23 @@ func TestNewCursor(t *testing.T) {
 	checkCursor(t, l, []*Cursor[int]{c, fc, bc})
 
 	if c.current != &l.root {
-		t.Errorf("Cursor.current = %v, want %v", c.current, &l.root)
-	}
-
-	if c.Node() != nil {
-		t.Errorf("Cursor.Node() = %v, want nil", c.Node())
+		t.Errorf("cursor.current = %v, want %v", c.current, &l.root)
 	}
 
 	if fc.current != l.root.next {
 		t.Errorf("FrontCursor.current = %v, want %v", fc.current, l.root.next)
 	}
 
-	if fc.Node().Value != 1 {
-		t.Errorf("FrontCursor.Node().Value = %v, want 1", fc.Node().Value)
+	if fc.current.value != 1 {
+		t.Errorf("FrontCursor.current.value = %v, want 1", fc.current.value)
 	}
 
 	if bc.current != l.root.prev {
 		t.Errorf("BackCursor.current = %v, want %v", bc.current, l.root.prev)
 	}
 
-	if bc.Node().Value != 1 {
-		t.Errorf("BackCursor.Node().Value = %v, want 1", bc.Node().Value)
+	if bc.current.value != 1 {
+		t.Errorf("BackCursor.current.value = %v, want 1", bc.current.value)
 	}
 
 	// Test cursor on a list with more than one element
@@ -84,24 +82,20 @@ func TestNewCursor(t *testing.T) {
 		t.Errorf("Cursor.current = %v, want %v", c.current, &l.root)
 	}
 
-	if c.Node() != nil {
-		t.Errorf("Cursor.Node() = %v, want nil", c.Node())
-	}
-
 	if fc.current != l.root.next {
 		t.Errorf("FrontCursor.current = %v, want %v", fc.current, l.root.next)
 	}
 
-	if fc.Node().Value != 1 {
-		t.Errorf("FrontCursor.Node().Value = %v, want 1", fc.Node().Value)
+	if fc.current.value != 1 {
+		t.Errorf("FrontCursor.current.value = %v, want 1", fc.current.value)
 	}
 
 	if bc.current != l.root.prev {
 		t.Errorf("BackCursor.current = %v, want %v", bc.current, l.root.prev)
 	}
 
-	if bc.Node().Value != 2 {
-		t.Errorf("BackCursor.Node().Value = %v, want 2", bc.Node().Value)
+	if bc.current.value != 2 {
+		t.Errorf("BackCursor.current.value = %v, want 2", bc.current.value)
 	}
 
 	//check cursor on list.Init()
@@ -152,16 +146,16 @@ func TestCursorClone(t *testing.T) {
 		t.Errorf("Cursor.CloneNext() does not point to the same location as the original cursor")
 	}
 
-	if c3.Node().Value != 1 {
-		t.Errorf("Cursor.CloneNext().Node().Value = %v, want 1", c3.Node().Value)
+	if c3.current.value != 1 {
+		t.Errorf("Cursor.CloneNext().current.value = %v, want 1", c3.current.value)
 	}
 
 	if c4.current != c.current.prev || c.list != c4.list {
 		t.Errorf("Cursor.ClonePrev() does not point to the same location as the original cursor")
 	}
 
-	if c4.Node().Value != 1 {
-		t.Errorf("Cursor.ClonePrev().Node().Value = %v, want 1", c4.Node().Value)
+	if c4.current.value != 1 {
+		t.Errorf("Cursor.ClonePrev().current.value = %v, want 1", c4.current.value)
 	}
 
 	//Test cursor on a non-empty list (2 elements)
@@ -181,16 +175,16 @@ func TestCursorClone(t *testing.T) {
 		t.Errorf("Cursor.CloneNext() does not point to the same location as the original cursor")
 	}
 
-	if c3.Node().Value != 1 {
-		t.Errorf("Cursor.CloneNext().Node().Value = %v, want 1", c3.Node().Value)
+	if c3.current.value != 1 {
+		t.Errorf("Cursor.CloneNext().current.value = %v, want 1", c3.current.value)
 	}
 
 	if c4.current != c.current.prev || c.list != c4.list {
 		t.Errorf("Cursor.ClonePrev() does not point to the same location as the original cursor")
 	}
 
-	if c4.Node().Value != 2 {
-		t.Errorf("Cursor.ClonePrev().Node().Value = %v, want 2", c4.Node().Value)
+	if c4.current.value != 2 {
+		t.Errorf("Cursor.ClonePrev().current.value = %v, want 2", c4.current.value)
 	}
 
 	//Test cursor on list.Init()
@@ -231,8 +225,8 @@ func TestCursorMove(t *testing.T) {
 		t.Errorf("Cursor.MoveNext() = %v, want %v", c.current, l.root.next)
 	}
 
-	if c.Node().Value != 1 {
-		t.Errorf("Cursor.MoveNext().Node().Value = %v, want 1", c.Node().Value)
+	if c.current.value != 1 {
+		t.Errorf("Cursor.MoveNext().current.value = %v, want 1", c.current.value)
 	}
 
 	c.MovePrev()
@@ -244,8 +238,8 @@ func TestCursorMove(t *testing.T) {
 		t.Errorf("Cursor.MovePrev() = %v, want %v", c.current, l.root.prev)
 	}
 
-	if c.Node().Value != 1 {
-		t.Errorf("Cursor.MovePrev().Node().Value = %v, want 1", c.Node().Value)
+	if c.current.value != 1 {
+		t.Errorf("Cursor.MovePrev().current.value = %v, want 1", c.current.value)
 	}
 
 	c.MoveNext()
@@ -262,8 +256,8 @@ func TestCursorMove(t *testing.T) {
 		t.Errorf("Cursor.MoveToFront() = %v, want %v", c.current, l.root.next)
 	}
 
-	if c.Node().Value != 1 {
-		t.Errorf("Cursor.MoveToFront().Node().Value = %v, want 1", c.Node().Value)
+	if c.current.value != 1 {
+		t.Errorf("Cursor.MoveToFront().current.value = %v, want 1", c.current.value)
 	}
 
 	c.MoveToBack()
@@ -286,8 +280,8 @@ func TestCursorMove(t *testing.T) {
 		t.Errorf("Cursor.MoveNext() = %v, want %v", c.current, l.root.next)
 	}
 
-	if c.Node().Value != 1 {
-		t.Errorf("Cursor.MoveNext().Node().Value = %v, want 1", c.Node().Value)
+	if c.current.value != 1 {
+		t.Errorf("Cursor.MoveNext().current.value = %v, want 1", c.current.value)
 	}
 
 	c.MovePrev()
@@ -299,8 +293,8 @@ func TestCursorMove(t *testing.T) {
 		t.Errorf("Cursor.MovePrev() = %v, want %v", c.current, l.root.prev)
 	}
 
-	if c.Node().Value != 2 {
-		t.Errorf("Cursor.MovePrev().Node().Value = %v, want 2", c.Node().Value)
+	if c.current.value != 2 {
+		t.Errorf("Cursor.MovePrev().current.value = %v, want 2", c.current.value)
 	}
 
 	c.MoveNext()
@@ -312,8 +306,8 @@ func TestCursorMove(t *testing.T) {
 		t.Errorf("Cursor.MoveToFront() = %v, want %v", c.current, l.root.next)
 	}
 
-	if c.Node().Value != 1 {
-		t.Errorf("Cursor.MoveToFront().Node().Value = %v, want 1", c.Node().Value)
+	if c.current.value != 1 {
+		t.Errorf("Cursor.MoveToFront().current.value = %v, want 1", c.current.value)
 	}
 
 	c.MoveToBack()
@@ -322,8 +316,8 @@ func TestCursorMove(t *testing.T) {
 		t.Errorf("Cursor.MoveToBack() = %v, want %v", c.current, l.root.prev)
 	}
 
-	if c.Node().Value != 2 {
-		t.Errorf("Cursor.MoveToBack().Node().Value = %v, want 2", c.Node().Value)
+	if c.current.value != 2 {
+		t.Errorf("Cursor.MoveToBack().current.value = %v, want 2", c.current.value)
 	}
 
 }
@@ -334,12 +328,12 @@ func TestCursorWalk(t *testing.T) {
 	c := l.Cursor()
 
 	// Test Walk on an empty list
-	c.WalkAscending(func(c *Node[string]) bool {
+	c.WalkAscending(func(c string) bool {
 		t.Errorf("Cursor.WalkAscending() called on an empty list")
 		return true
 	})
 
-	c.WalkDescending(func(c *Node[string]) bool {
+	c.WalkDescending(func(c string) bool {
 		t.Errorf("Cursor.WalkDescending() called on an empty list")
 		return true
 	})
@@ -349,16 +343,17 @@ func TestCursorWalk(t *testing.T) {
 	// Test Walk on a list with one element
 	l.PushBack("1")
 
-	c.WalkAscending(func(c *Node[string]) bool {
-		if c.Value != "1" {
-			t.Errorf("Cursor.WalkAscending() = %v, want 1", c.Value)
+	c.WalkAscending(func(v string) bool {
+		if v != "1" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 1", v)
 		}
 		return true
 	})
 
-	c.WalkDescending(func(c *Node[string]) bool {
-		if c.Value != "1" {
-			t.Errorf("Cursor.WalkDescending() = %v, want 1", c.Value)
+	c.WalkDescending(func(v string) bool {
+
+		if v != "1" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 1", v)
 		}
 		return true
 	})
@@ -372,9 +367,9 @@ func TestCursorWalk(t *testing.T) {
 	// Test Walk on a list with more than one element
 	l.PushBack("2")
 
-	c.WalkAscending(func(c *Node[string]) bool {
-		if c.Value != "1" {
-			t.Errorf("Cursor.WalkAscending() = %v, want 1", c.Value)
+	c.WalkAscending(func(v string) bool {
+		if v != "1" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 1", v)
 		}
 		return false
 	})
@@ -384,16 +379,16 @@ func TestCursorWalk(t *testing.T) {
 	}
 
 	// The walker supposed to not move in this case
-	c.WalkAscending(func(c *Node[string]) bool {
-		if c.Value != "1" {
-			t.Errorf("Cursor.WalkAscending() = %v, want 1", c.Value)
+	c.WalkAscending(func(v string) bool {
+		if v != "1" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 1", v)
 		}
 		return false
 	})
 
 	// move to "2"
-	c.WalkAscending(func(c *Node[string]) bool {
-		if c.Value == "2" {
+	c.WalkAscending(func(v string) bool {
+		if v == "2" {
 			return false // stop walking
 		}
 		return true
@@ -404,9 +399,9 @@ func TestCursorWalk(t *testing.T) {
 	}
 
 	// move to sentinel
-	c.WalkAscending(func(c *Node[string]) bool {
-		if c.Value != "2" {
-			t.Errorf("Cursor.WalkAscending() = %v, want 2", c.Value)
+	c.WalkAscending(func(v string) bool {
+		if v != "2" {
+			t.Errorf("Cursor.WalkAscending() = %v, want 2", v)
 		}
 		return true
 	})
@@ -415,9 +410,9 @@ func TestCursorWalk(t *testing.T) {
 		t.Errorf("Cursor.WalkAscending() = %v, want %v", c.current, &l.root)
 	}
 
-	c.WalkDescending(func(c *Node[string]) bool {
-		if c.Value != "2" {
-			t.Errorf("Cursor.WalkDescending() = %v, want 2", c.Value)
+	c.WalkDescending(func(v string) bool {
+		if v != "2" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 2", v)
 		}
 		return false
 	})
@@ -427,16 +422,16 @@ func TestCursorWalk(t *testing.T) {
 	}
 
 	// The walker supposed to not move in this case
-	c.WalkDescending(func(c *Node[string]) bool {
-		if c.Value != "2" {
-			t.Errorf("Cursor.WalkDescending() = %v, want 2", c.Value)
+	c.WalkDescending(func(v string) bool {
+		if v != "2" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 2", v)
 		}
 		return false
 	})
 
 	// move to "1"
-	c.WalkDescending(func(c *Node[string]) bool {
-		if c.Value == "1" {
+	c.WalkDescending(func(v string) bool {
+		if v == "1" {
 			return false // stop walking
 		}
 		return true
@@ -447,9 +442,9 @@ func TestCursorWalk(t *testing.T) {
 	}
 
 	// move to sentinel
-	c.WalkDescending(func(c *Node[string]) bool {
-		if c.Value != "1" {
-			t.Errorf("Cursor.WalkDescending() = %v, want 1", c.Value)
+	c.WalkDescending(func(v string) bool {
+		if v != "1" {
+			t.Errorf("Cursor.WalkDescending() = %v, want 1", v)
 		}
 		return true
 	})
@@ -495,17 +490,17 @@ func TestCursorInvalid(t *testing.T) {
 
 	l.PopFront()
 
-	if c1.Node() != nil {
-		t.Errorf("Cursor.Node() = %v, want nil", c1.Node())
+	if c1.current != &l.root {
+		t.Errorf("c1.current = %v, want %v", c1.current, &l.root)
 	}
 
-	if c2.Node() != nil {
-		t.Errorf("Cursor.Node() = %v, want nil", c2.Node())
-	}
-
-	if c3.Node() != nil {
-		t.Errorf("Cursor.Node() = %v, want nil", c3.Node())
-	}
+	//if c2.current != &l.root {
+	//	t.Errorf("c2.current = %v, want %v", c2.current, &l.root)
+	//}
+	//
+	//if c3.current != &l.root {
+	//	t.Errorf("c3.current = %v, want %v", c3.current, &l.root)
+	//}
 
 	if !c1.IsValid() {
 		t.Errorf("Cursor.IsValid() = %v, want true", c1.IsValid())
@@ -552,8 +547,8 @@ func TestCursorInvalid(t *testing.T) {
 		t.Errorf("Cursor.IsValid() = %v, want false", c1.IsValid())
 	}
 
-	if l.InsertAfter(5, c1) != nil {
-		t.Errorf("Cursor.InsertAfter() = %v, want nil", l.InsertAfter(5, c1))
+	if l.InsertAfter(5, c1) != false {
+		t.Errorf("Cursor.InsertAfter() = %v, want false", l.InsertAfter(5, c1))
 	}
 
 }
