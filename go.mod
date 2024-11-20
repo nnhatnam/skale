@@ -1,5 +1,7 @@
 module github.com/nnhatnam/skale
 
-go 1.19
+go 1.22.0
 
-require golang.org/x/exp v0.0.0-20230130191013-ac48d9c7dd6e
+toolchain go1.22.9
+
+require golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
